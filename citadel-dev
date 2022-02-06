@@ -3,23 +3,23 @@ set -euo pipefail
 
 show_help() {
   cat << EOF
-umbrel-dev 1.2.1
+citadel-dev 1.2.1
 
-Automatically initialize and manage an Umbrel development environment.
+Automatically initialize and manage an Citadel development environment.
 
-Usage: umbrel-dev <command> [options]
+Usage: citadel-dev <command> [options]
 
 Commands:
     help                    Show this help message
-    init                    Initialize an Umbrel development environment in the working directory
+    init                    Initialize an Citadel development environment in the working directory
     boot                    Boot the development VM
     shutdown                Shutdown the development VM
     destroy                 Destroy the development VM
     containers              List container services
     rebuild <container>     Rebuild a container service
-    reload                  Reloads the Umbrel service
+    reload                  Reloads the Citadel service
     app <command> [options] Manages apps installations
-    logs                    Stream Umbrel logs
+    logs                    Stream Citadel logs
     run <command>           Run a command inside the development VM
     ssh                     Get an SSH session inside the development VM
 EOF
@@ -40,19 +40,13 @@ fi
 # Check required dependencies are installed
 # If not, fail with instructions on how to fix
 check_dependencies() {
-  for cmd in "git" "vagrant" "vboxmanage"; do
+  for cmd in "git" "vagrant"; do
     if ! command -v $cmd >/dev/null 2>&1; then
-      echo "This script requires Git, VirtualBox and Vagrant to be installed."
+      echo "This script requires Git and Vagrant to be installed."
       echo
-      echo "If you use Homebrew you can install them with:"
-      echo
-      echo "  brew install git"
-      echo "  brew install --cask virtualbox vagrant"
-      echo
-      echo "Otherwise see:"
+      echo "See:"
       echo
       echo "  https://git-scm.com/downloads"
-      echo "  https://virtualbox.org/wiki/Downloads"
       echo "  https://www.vagrantup.com/downloads.html"
       exit 1
     fi
@@ -61,7 +55,7 @@ check_dependencies() {
 
 # Run a command inside the development VM
 run_in_vm() {
-  vagrant ssh -c "cd /vagrant/getumbrel/umbrel && $1"
+  vagrant ssh -c "cd /vagrant/runcitadel/core && $1"
 }
 
 # Get script location and correctly handle any symlinks
@@ -78,13 +72,13 @@ get_script_location() {
   echo $dir
 }
 
-check_umbrel_dev_environment() {
-  filename=".umbrel-dev"
+check_citadel_dev_environment() {
+  filename=".citadel-dev"
   dir=$PWD
   while [ ! -e "$dir/$filename" ]; do
     dir=${dir%/*}
     if [[ "$dir" = "" ]]; then
-      echo "Error: This doesn't seem to be an umbrel-dev environment."
+      echo "Error: This doesn't seem to be an citadel-dev environment."
       exit 1
     fi
   done
@@ -99,7 +93,7 @@ else
   command="$1"
 fi
 
-# Initialize an Umbrel development environment in the working directory
+# Initialize an Citadel development environment in the working directory
 if [[ "$command" = "init" ]]; then
   if [[ "$(ls -A)" ]]; then
     echo "Working directory must be empty!"
@@ -109,72 +103,65 @@ if [[ "$command" = "init" ]]; then
   echo "Creating Vagrantfile..."
   cp "$(get_script_location)/Vagrantfile" .
 
-  echo
-  vagrant plugin install --local vagrant-vbguest --plugin-version=0.24.0
+  # echo
+  # vagrant plugin install --local vagrant-vbguest --plugin-version=0.24.0
 
   echo
   echo "Cloning container repositories..."
-  repos="getumbrel/umbrel getumbrel/umbrel-dashboard getumbrel/umbrel-manager getumbrel/umbrel-middleware"
+  repos="runcitadel/core runcitadel/dashboard runcitadel/manager runcitadel/middleware runcitadel/sdk runcitadel/ui"
   for repo in $repos; do
     echo
     git clone "https://github.com/$repo.git" "$repo"
-    if [[ "$repo" == "getumbrel/umbrel" ]]; then
+    if [[ "$repo" == "runcitadel/core" ]]; then
       echo
       echo "Adding Docker Compose overrides to $repo..."
       cp "$(get_script_location)/docker-compose.override.yml" "$repo/"
     fi
   done
 
-  touch .umbrel-dev
+  touch .citadel-dev
 
   echo
   echo "Your development environment is now setup"
   echo "You can boot your development VM with:"
   echo
-  echo "  umbrel-dev boot"
+  echo "  citadel-dev boot"
   exit
 fi
 
 # Boot the development VM
 if [[ "$command" = "boot" ]]; then
-  check_umbrel_dev_environment
-
-  # Update some packages on boot to prevent issues with vagrant-vbguest.
-  # https://github.com/dotless-de/vagrant-vbguest/issues/351#issuecomment-545391139
-  vagrant up --no-provision || true # This will sometimes fail
-  vagrant ssh -c "sudo apt-get update -y && sudo apt-get install -y build-essential linux-headers-amd64 linux-image-amd64 python-pip"
-  vagrant halt
-
+  check_citadel_dev_environment
   vagrant up
   exit
 fi
 
 # Shutdown the development VM
 if [[ "$command" = "shutdown" ]]; then
-  check_umbrel_dev_environment
+  check_citadel_dev_environment
   vagrant halt
   exit
 fi
 
 # Destroy the development VM
 if [[ "$command" = "destroy" ]]; then
-  check_umbrel_dev_environment
+  check_citadel_dev_environment
   echo "Warning: This will completely remove the VM meaning it needs to be recreated on next boot."
-  echo "If you just want to stop the VM run: umbrel-dev shutdown"
+  echo "If you just want to stop the VM run: citadel-dev shutdown"
   vagrant destroy
   exit
 fi
 
 # List container services
 if [[ "$command" = "containers" ]]; then
-  check_umbrel_dev_environment
+  check_citadel_dev_environment
   run_in_vm "docker-compose config --services"
   exit
 fi
 
 # Rebuild a container service
 if [[ "$command" = "rebuild" ]]; then
-  check_umbrel_dev_environment
+  check_citadel_dev_environment
   if [ -z ${2+x} ]; then
     echo "A second argument is required!"
     exit 1
@@ -184,14 +171,14 @@ if [[ "$command" = "rebuild" ]]; then
        docker-compose build $container  \
     && docker-compose stop $container   \
     && docker-compose rm -f $container  \
-    && DEVICE_HOSTS=http://umbrel-dev.local docker-compose up -d $container"
+    && DEVICE_HOSTS=http://citadel-dev.local docker-compose up -d $container"
   exit
 fi
 
 # Rebuild a container service
 if [[ "$command" = "reload" ]]; then
-  check_umbrel_dev_environment
-  echo "Reloading the Umbrel service..."
+  check_citadel_dev_environment
+  echo "Reloading the Citadel service..."
   echo
   run_in_vm "                  \
        sudo scripts/stop       \
@@ -202,7 +189,7 @@ fi
 
 # Rebuild a container service
 if [[ "$command" = "app" ]]; then
-  check_umbrel_dev_environment
+  check_citadel_dev_environment
   if [ -z ${2+x} ]; then
     args=""
   else
@@ -212,9 +199,9 @@ if [[ "$command" = "app" ]]; then
   exit
 fi
 
-# Stream Umbrel logs
+# Stream Citadel logs
 if [[ "$command" = "logs" ]]; then
-  check_umbrel_dev_environment
+  check_citadel_dev_environment
   while true; do
     run_in_vm "docker-compose logs -f" || {
       echo "$(date +"%T") Trying again in 1 second..."
@@ -226,7 +213,7 @@ fi
 
 # Run a command inside the development VM
 if [[ "$command" = "run" ]]; then
-  check_umbrel_dev_environment
+  check_citadel_dev_environment
   if [ -z ${2+x} ]; then
     echo "A second argument is required!"
     exit 1
@@ -237,7 +224,7 @@ fi
 
 # Get an SSH session inside the development VM
 if [[ "$command" = "ssh" ]]; then
-  check_umbrel_dev_environment
+  check_citadel_dev_environment
   run_in_vm bash
   exit
 fi

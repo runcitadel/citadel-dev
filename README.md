@@ -1,75 +1,59 @@
-```
-              ,;###GGGGGGGGGGl#Sp
-           ,##GGGlW""^'  '`""%GGGG#S,
-         ,#GGG"                  "lGG#o
-        #GGl^                      '$GG#
-      ,#GGb                          \GGG,
-      lGG"                            "GGG
-     #GGGlGGGl##p,,p##lGGl##p,,p###ll##GGGG
-    !GGGlW"""*GGGGGGG#""""WlGGGGG#W""*WGGGGS
-     ""          "^          '"          ""
+# citadel-dev
 
-
-                @GGS         lG#
-                !GGG        !GGG
-                !GGG        !GGG
-                !GGG        !GGG
-                !GGG        !GGG
-                !GGG        !GGG
-                'GGG        $GGl
-                 "GGG#psqp##GG#
-                   "%GGGGGG#"
-```
-
-# ☂️ umbrel-dev
-
-Automatically initialize and manage an Umbrel development environment.
+Automatically initialize and manage an Citadel development environment.
 
 ## Install
 
-### Homebrew
+### Clone with Git
 
 ```
-brew install lukechilds/tap/umbrel-dev
+git clone https://github.com/runcitadel/citadel-dev.git ~/.citadel-dev
 ```
 
-### Git
-
-```
-git clone https://github.com/getumbrel/umbrel-dev.git ~/.umbrel-dev
-```
-
-Then add to your shell profile:
+### Update Shell Profile
 
 ```shell
-export PATH="$PATH:$HOME/.umbrel-dev/bin"
+export PATH="$PATH:$HOME/.citadel-dev/bin"
+```
+
+### Install Vagrant
+
+Run `citadel-setup` if you're on debian/ubuntu based Linux, and you've already completed the above steps. It runs the following:
+
+```
+curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+sudo apt-get update && sudo apt-get -y install vagrant
+vagrant plugin install vagrant-reload
 ```
 
 ## Usage
 
 ```
-$ umbrel-dev
-umbrel-dev 1.2.1
+$ citadel-dev
+citadel-dev 1.2.1
 
-Automatically initialize and manage an Umbrel development environment.
+Automatically initialize and manage an Citadel development environment.
 
-Usage: umbrel-dev <command> [options]
+Usage: citadel-dev <command> [options]
 
 Commands:
     help                    Show this help message
-    init                    Initialize an Umbrel development environment in the working directory
+    init                    Initialize an Citadel development environment in the working directory
     boot                    Boot the development VM
     shutdown                Shutdown the development VM
     destroy                 Destroy the development VM
     containers              List container services
     rebuild <container>     Rebuild a container service
-    reload                  Reloads the Umbrel service
+    reload                  Reloads the Citadel service
     app <command> [options] Manages apps installations
-    logs                    Stream Umbrel logs
+    logs                    Stream Citadel logs
     run <command>           Run a command inside the development VM
     ssh                     Get an SSH session inside the development VM
 ```
 
-## License
+## Licenses
 
-MIT © Umbrel
+All code committed on and before git commit `874d4d801f1bb04ded5155e303be31fe20a17e63` is licensed via MIT and © Citadel
+
+All code committed after git commit `874d4d801f1bb04ded5155e303be31fe20a17e63` is licensed GPL v3
