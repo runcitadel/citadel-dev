@@ -1,6 +1,6 @@
 # citadel-dev
 
-Automatically initialize and manage an Citadel development environment.
+Automatically initialize and manage a Citadel development environment.
 
 ## Install
 
@@ -54,6 +54,6 @@ Commands:
 
 ## Licenses
 
-All code committed on and before git commit `874d4d801f1bb04ded5155e303be31fe20a17e63` is licensed via MIT and © Citadel
+All code committed on and before git commit `874d4d801f1bb04ded5155e303be31fe20a17e63` is licensed via MIT and © Umbrel
 
 All code committed after git commit `874d4d801f1bb04ded5155e303be31fe20a17e63` is licensed GPL v3
