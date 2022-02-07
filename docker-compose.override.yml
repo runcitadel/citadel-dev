@@ -5,7 +5,8 @@ services:
     image: runcitadel/dashboard
     build:
       context: ../dashboard
-      dockerfile: Dockerfile.dev
+      # Todo: Do we need a separate Dockerfile for development of the dashboard or ui repos??
+      # dockerfile: Dockerfile.dev
     volumes:
       - ../dashboard:/app
   manager:
