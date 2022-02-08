@@ -33,25 +33,27 @@ Vagrant.configure(2) do |config|
 
   # Install Docker
   config.vm.provision "shell", inline: <<-SHELL
-    sudo apt-get install -y curl python3-pip libffi-dev
+    sudo apt-get install -y curl libffi-dev
     curl -fsSL https://get.docker.com | sudo sh
     sudo usermod -aG docker vagrant
-    pip3 install docker-compose
+
+    # Install Compose V2
+    mkdir -p ~/.docker/cli-plugins/
+    curl -SL https://github.com/docker/compose/releases/download/v2.2.3/docker-compose-linux-x86_64 -o ~/.docker/cli-plugins/docker-compose
+    chmod +x ~/.docker/cli-plugins/docker-compose
   SHELL
 
-  # Todo: not sure what Avahi was being used for?
   # Install Avahi
-  # config.vm.provision "shell", inline: <<-SHELL
-  #   apt-get install -y avahi-daemon avahi-discover libnss-mdns
-  # SHELL
+  config.vm.provision "shell", inline: <<-SHELL
+    apt-get install -y avahi-daemon avahi-discover libnss-mdns
+  SHELL
 
   # Install Citadel
   config.vm.provision "shell", inline: <<-SHELL
-    apt-get install -y fswatch rsync jq python3-dacite
+    apt-get install -y fswatch rsync jq python3-dacite python3-semver python3-jsonschema python3-yaml
     cd /vagrant/runcitadel/core
     sudo NETWORK=regtest ./scripts/configure
-    docker-compose build --parallel
-    docker-compose run dashboard -c
+    docker compose build --parallel
   SHELL
 
   # Start Citadel on boot
