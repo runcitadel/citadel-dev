@@ -132,7 +132,7 @@ fi
 # Boot the development VM
 if [[ "$command" = "boot" ]]; then
   check_citadel_dev_environment
-  vagrant up
+  VAGRANT_LOG=info vagrant up
   exit
 fi
 
