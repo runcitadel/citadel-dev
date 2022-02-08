@@ -15,7 +15,16 @@ Vagrant.configure(2) do |config|
   # config.vm.network "public_network", bridge: "#$default_network_interface"
 
   # Sync files from host
-  config.vm.synced_folder ".", "/vagrant"
+  # NOTE:
+  # - set NFS version
+  # - set map_uid/map_gid to avoid permission errors
+  config.vm.synced_folder ".",
+    "/vagrant",
+    id: "core",
+    type: "nfs",
+    nfs_version: "4",
+    nfs_udp: false,
+    map_uid: 0, map_gid: 0
 
   # Update package lists
   config.vm.provision "shell", inline: <<-SHELL
@@ -38,11 +47,11 @@ Vagrant.configure(2) do |config|
 
   # Install Citadel
   config.vm.provision "shell", inline: <<-SHELL
-    apt-get install -y fswatch rsync jq
+    apt-get install -y fswatch rsync jq python3-dacite
     cd /vagrant/runcitadel/core
     sudo NETWORK=regtest ./scripts/configure
     docker-compose build --parallel
-    docker-compose run dashboard -c yarn
+    docker-compose run dashboard -c
   SHELL
 
   # Start Citadel on boot
