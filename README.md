@@ -116,6 +116,23 @@ Commands:
     ssh                     Get an SSH session inside the development VM
 ```
 
+### Mining blocks on Bitcoin Regtest
+
+1. SSH into VM:
+```shell
+$ citadel-dev ssh
+```
+
+2. Create a wallet:
+```shell
+$ docker exec -it bitcoin bitcoin-cli createwallet "mywallet"
+```
+
+3. Generate a block every minute:
+```shell
+$ while true; do docker exec -it bitcoin bitcoin-cli -generate 1; sleep 60; done
+```
+
 ## Troubleshooting
 
 ### Possible problems with vagant-libvert plugin installation on Linux
