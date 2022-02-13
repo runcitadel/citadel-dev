@@ -114,6 +114,8 @@ Commands:
     logs                    Stream Citadel logs
     run <command>           Run a command inside the development VM
     ssh                     Get an SSH session inside the development VM
+    bitcoin-cli <command>   Run bitcoin-cli with arguments
+    auto-mine <seconds>     Generate a block continuously
 ```
 
 ### Mining blocks on Bitcoin Regtest
