@@ -38,9 +38,9 @@ Vagrant.configure(2) do |config|
     sudo usermod -aG docker vagrant
 
     # Install Compose V2
-    mkdir -p ~/.docker/cli-plugins/
-    curl -SL https://github.com/docker/compose/releases/download/v2.2.3/docker-compose-linux-x86_64 -o ~/.docker/cli-plugins/docker-compose
-    chmod +x ~/.docker/cli-plugins/docker-compose
+    mkdir -p /usr/local/lib/docker/cli-plugins/
+    curl -SL https://github.com/docker/compose/releases/download/v2.2.3/docker-compose-linux-x86_64 -o /usr/local/lib/docker/cli-plugins/docker-compose
+    chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
   SHELL
 
   # Install Avahi

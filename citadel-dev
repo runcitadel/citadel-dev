@@ -155,7 +155,7 @@ fi
 # List container services
 if [[ "$command" = "containers" ]]; then
   check_citadel_dev_environment
-  run_in_vm "docker-compose config --services"
+  run_in_vm "docker compose config --services"
   exit
 fi
 
@@ -168,10 +168,10 @@ if [[ "$command" = "rebuild" ]]; then
   fi
   container="$2"
   run_in_vm "                           \
-       docker-compose build $container  \
-    && docker-compose stop $container   \
-    && docker-compose rm -f $container  \
-    && DEVICE_HOSTS=http://citadel-dev.local docker-compose up -d $container"
+       docker compose build $container  \
+    && docker compose stop $container   \
+    && docker compose rm -f $container  \
+    && DEVICE_HOSTS=http://citadel-dev.local docker compose up -d $container"
   exit
 fi
 
@@ -203,7 +203,7 @@ fi
 if [[ "$command" = "logs" ]]; then
   check_citadel_dev_environment
   while true; do
-    run_in_vm "docker-compose logs -f" || {
+    run_in_vm "docker compose logs -f" || {
       echo "$(date +"%T") Trying again in 1 second..."
     }
     sleep 1
