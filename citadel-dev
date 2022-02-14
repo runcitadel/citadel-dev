@@ -134,7 +134,34 @@ fi
 # Boot the development VM
 if [[ "$command" = "boot" ]]; then
   check_citadel_dev_environment
-  VAGRANT_LOG=info vagrant up
+  shift
+
+  # default values
+  network="regtest"
+
+  # parse arguments
+  for arg in "$@"
+  do
+    case "$arg" in
+      -n|--network)
+          case $2 in
+           "mainnet"|"testnet"|"signet"|"regtest")
+              network=$2
+              shift 1
+              ;;
+            *)
+              echo "Not a valid value for network"
+              exit 1
+          esac
+          ;;
+      *)
+        shift 1
+        ;;
+    esac
+  done
+
+  echo "Booting with network set to: $network"
+  VAGRANT_LOG=info NETWORK=$network vagrant up
   exit
 fi
 
@@ -243,6 +270,7 @@ if [[ "$command" = "auto-mine" ]]; then
     echo "Missing argument: Specify an interval in seconds"
     exit 1
   fi
+  echo "Generating a block every $2 seconds. Press [CTRL+C] to stop..."
   run_in_vm "while true; do docker exec -it bitcoin bitcoin-cli -generate 1; sleep $2; done"
   exit
 fi

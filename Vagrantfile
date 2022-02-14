@@ -49,10 +49,10 @@ Vagrant.configure(2) do |config|
   SHELL
 
   # Install Citadel
-  config.vm.provision "shell", inline: <<-SHELL
+  config.vm.provision "shell", env: {"NETWORK" => ENV['NETWORK']}, inline: <<-SHELL
     apt-get install -y fswatch rsync jq python3-dacite python3-semver python3-jsonschema python3-yaml
     cd /vagrant/runcitadel/core
-    sudo NETWORK=regtest ./scripts/configure
+    sudo NETWORK=$NETWORK ./scripts/configure
     docker compose build --parallel
   SHELL
 
