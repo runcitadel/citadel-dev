@@ -23,6 +23,7 @@ Commands:
     run <command>           Run a command inside the development VM
     ssh                     Get an SSH session inside the development VM
     bitcoin-cli <command>   Run bitcoin-cli with arguments
+    lncli <command>         Run lncli with arguments
     auto-mine <seconds>     Generate a block continuously
 EOF
 }
@@ -260,6 +261,18 @@ if [[ "$command" = "bitcoin-cli" ]]; then
     args="${@:2}"
   fi
   run_in_vm "docker exec -it bitcoin bitcoin-cli ${args}"
+  exit
+fi
+
+# Run lncli with arguments
+if [[ "$command" = "lncli" ]]; then
+  check_citadel_dev_environment
+  if [ -z ${2+x} ]; then
+    args=""
+  else
+    args="${@:2}"
+  fi
+  run_in_vm "docker exec -it lnd lncli ${args}"
   exit
 fi
 

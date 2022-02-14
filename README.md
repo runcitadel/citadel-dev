@@ -118,22 +118,39 @@ Commands:
     auto-mine <seconds>     Generate a block continuously
 ```
 
-### Mining blocks on Bitcoin Regtest
+### Funding the Lightning wallet
 
-1. SSH into VM:
+1. Create a wallet with Bitcoin core:
+
 ```shell
-$ citadel-dev ssh
+$ citadel-dev bitcoin-cli createwallet "mywallet"
 ```
 
-2. Create a wallet:
+2. Generate some blocks to get funds:
+
 ```shell
-$ docker exec -it bitcoin bitcoin-cli createwallet "mywallet"
+$ citadel-dev bitcoin-cli -generate 101
 ```
 
-3. Generate a block every minute:
+3. Generate a new address with LND:
+
 ```shell
-$ while true; do docker exec -it bitcoin bitcoin-cli -generate 1; sleep 60; done
+$ citadel-dev lncli -n regtest newaddress p2wkh
 ```
+
+4. Send some funds to the new address:
+
+```shell
+$ citadel-dev bitcoin-cli -named sendtoaddress address="<my-address>" amount=0.5 fee_rate=1 replaceable=true
+```
+
+5. Mine some blocks to confirm the transaction:
+
+```shell
+$ citadel-dev bitcoin-cli -generate 6
+```
+
+6. You should now be able to open channels with other nodes in your network
 
 ## Troubleshooting
 
