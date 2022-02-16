@@ -22,6 +22,9 @@ Commands:
     logs                    Stream Citadel logs
     run <command>           Run a command inside the development VM
     ssh                     Get an SSH session inside the development VM
+    bitcoin-cli <command>   Run bitcoin-cli with arguments
+    lncli <command>         Run lncli with arguments
+    auto-mine <seconds>     Generate a block continuously
 EOF
 }
 
@@ -132,7 +135,34 @@ fi
 # Boot the development VM
 if [[ "$command" = "boot" ]]; then
   check_citadel_dev_environment
-  VAGRANT_LOG=info vagrant up
+  shift
+
+  # default values
+  network="regtest"
+
+  # parse arguments
+  for arg in "$@"
+  do
+    case "$arg" in
+      -n|--network)
+          case $2 in
+           "mainnet"|"testnet"|"signet"|"regtest")
+              network=$2
+              shift 1
+              ;;
+            *)
+              echo "Not a valid value for network"
+              exit 1
+          esac
+          ;;
+      *)
+        shift 1
+        ;;
+    esac
+  done
+
+  echo "Booting with network set to: $network"
+  VAGRANT_LOG=info NETWORK=$network vagrant up
   exit
 fi
 
@@ -155,7 +185,7 @@ fi
 # List container services
 if [[ "$command" = "containers" ]]; then
   check_citadel_dev_environment
-  run_in_vm "docker-compose config --services"
+  run_in_vm "docker compose config --services"
   exit
 fi
 
@@ -168,10 +198,10 @@ if [[ "$command" = "rebuild" ]]; then
   fi
   container="$2"
   run_in_vm "                           \
-       docker-compose build $container  \
-    && docker-compose stop $container   \
-    && docker-compose rm -f $container  \
-    && DEVICE_HOSTS=http://citadel-dev.local docker-compose up -d $container"
+       docker compose build $container  \
+    && docker compose stop $container   \
+    && docker compose rm -f $container  \
+    && DEVICE_HOSTS=http://citadel-dev.local docker compose up -d $container"
   exit
 fi
 
@@ -203,7 +233,7 @@ fi
 if [[ "$command" = "logs" ]]; then
   check_citadel_dev_environment
   while true; do
-    run_in_vm "docker-compose logs -f" || {
+    run_in_vm "docker compose logs -f" || {
       echo "$(date +"%T") Trying again in 1 second..."
     }
     sleep 1
@@ -219,6 +249,42 @@ if [[ "$command" = "run" ]]; then
     exit 1
   fi
   run_in_vm "$2"
+  exit
+fi
+
+# Run bitcoin-cli with arguments
+if [[ "$command" = "bitcoin-cli" ]]; then
+  check_citadel_dev_environment
+  if [ -z ${2+x} ]; then
+    args=""
+  else
+    args="${@:2}"
+  fi
+  run_in_vm "docker exec -it bitcoin bitcoin-cli ${args}"
+  exit
+fi
+
+# Run lncli with arguments
+if [[ "$command" = "lncli" ]]; then
+  check_citadel_dev_environment
+  if [ -z ${2+x} ]; then
+    args=""
+  else
+    args="${@:2}"
+  fi
+  run_in_vm "docker exec -it lnd lncli ${args}"
+  exit
+fi
+
+# Generate a block continuously
+if [[ "$command" = "auto-mine" ]]; then
+  check_citadel_dev_environment
+  if [ -z ${2+x} ]; then
+    echo "Missing argument: Specify an interval in seconds"
+    exit 1
+  fi
+  echo "Generating a block every $2 seconds. Press [CTRL+C] to stop..."
+  run_in_vm "while true; do docker exec -it bitcoin bitcoin-cli -generate 1; sleep $2; done"
   exit
 fi
 

@@ -114,7 +114,43 @@ Commands:
     logs                    Stream Citadel logs
     run <command>           Run a command inside the development VM
     ssh                     Get an SSH session inside the development VM
+    bitcoin-cli <command>   Run bitcoin-cli with arguments
+    auto-mine <seconds>     Generate a block continuously
 ```
+
+### Funding the Lightning wallet
+
+1. Create a wallet with Bitcoin core:
+
+```shell
+$ citadel-dev bitcoin-cli createwallet "mywallet"
+```
+
+2. Generate some blocks to get funds:
+
+```shell
+$ citadel-dev bitcoin-cli -generate 101
+```
+
+3. Generate a new address with LND:
+
+```shell
+$ citadel-dev lncli -n regtest newaddress p2wkh
+```
+
+4. Send some funds to the new address:
+
+```shell
+$ citadel-dev bitcoin-cli -named sendtoaddress address="<my-address>" amount=0.5 fee_rate=1 replaceable=true
+```
+
+5. Mine some blocks to confirm the transaction:
+
+```shell
+$ citadel-dev bitcoin-cli -generate 6
+```
+
+6. You should now be able to open channels with other nodes in your network
 
 ## Troubleshooting
 
