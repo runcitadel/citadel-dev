@@ -134,7 +134,11 @@ if [[ "$command" = "init" ]]; then
     echo
 
     if [ -n "$branch" ]; then
-      git clone -b "$branch" "https://github.com/$repo.git" "$repo"
+      if [[ "$repo" == "runcitadel/sdk" ]]; then
+        git clone "https://github.com/$repo.git" "$repo"
+      else
+        git clone -b "$branch" "https://github.com/$repo.git" "$repo"
+      fi
     else
       git clone "https://github.com/$repo.git" "$repo"
     fi
