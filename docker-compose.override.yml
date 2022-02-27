@@ -46,3 +46,4 @@ services:
     volumes:
       - ../middleware:/app
       - "/app/node_modules"
+    command: ''
