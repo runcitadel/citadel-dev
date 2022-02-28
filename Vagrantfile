@@ -64,6 +64,19 @@ Vagrant.configure(2) do |config|
     ./scripts/start
   SHELL
 
-  # Message
-  config.vm.post_up_message = "\n\nCitadel development environment ready: http://#{config.vm.hostname}.local"
+# Message
+$msg = <<MSG
+-----------------------------------------------------------
+Citadel development environment ready:
+
+Network: #{ENV['NETWORK']}
+
+URLs:
+ - dashboard (current)  - http://#{config.vm.hostname}.local
+ - dashboard (new)      - http://#{config.vm.hostname}.local:8000
+
+-----------------------------------------------------------
+MSG
+
+  config.vm.post_up_message = $msg
 end

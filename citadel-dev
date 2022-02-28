@@ -11,8 +11,8 @@ Usage: citadel-dev <command> [options]
 
 Commands:
     help                    Show this help message
-    init                    Initialize an Citadel development environment in the working directory
-    boot                    Boot the development VM
+    init [options]          Initialize an Citadel development environment in the working directory
+    boot [options]          Boot the development VM
     shutdown                Shutdown the development VM
     destroy                 Destroy the development VM
     containers              List container services
