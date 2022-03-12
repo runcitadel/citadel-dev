@@ -38,6 +38,7 @@ services:
     volumes:
       - ../manager:/app
       - "/app/node_modules"
+    command: ''
   middleware:
     image: runcitadel/middleware
     build:
