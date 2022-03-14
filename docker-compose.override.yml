@@ -36,9 +36,8 @@ services:
       - ../manager:/app
     command: sh -c "
       ./install-dependencies.sh &&
-      ./start.sh"
+      ./start-and-watch.sh"
       # TODO: watch mode does not yet work for manager
-      # ./start-and-watch.sh"
   middleware:
     image: runcitadel/middleware
     build:

@@ -99,13 +99,17 @@ $msg = <<MSG
 ,,,,,,,,,,,,,,,,,,,,,,,,,,,,,**(#%&@@@@#,,,,,,,,,,,,*,,,,,,,,,,,,,,,,,,,,,,,,,,,
 ,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,*/(#&(,,,,,,,,*,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
-Citadel development environment ready:
 
-Network: #{ENV['NETWORK']}
+Yarn is installing dependencies, this will take a few more minutes...
+Run `citadel-dev logs` to see progress.
+
+Citadel development environment will be ready at:
 
 URLs:
  - dashboard (current)  - http://#{config.vm.hostname}.local
  - dashboard (new)      - http://#{config.vm.hostname}.local:8000
+
+Network: #{ENV['NETWORK']}
 
 --------------------------------------------------------------------------------
 MSG
