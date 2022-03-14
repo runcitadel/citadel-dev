@@ -12,7 +12,6 @@ services:
       target: development
     volumes:
       - ../dashboard:/app
-      - "/app/node_modules"
     environment:
       DEVICE_HOSTNAME: ${DEVICE_HOSTNAME:-citadel-dev.local}
   ui:
@@ -23,8 +22,6 @@ services:
       target: development
     volumes:
       - ../ui:/app
-      - "/app/node_modules"
-      - "/app/.next"
     env_file:
       - .env
     networks:
@@ -37,8 +34,11 @@ services:
       target: development
     volumes:
       - ../manager:/app
-      - "/app/node_modules"
-    command: ''
+    command: sh -c "
+      ./install-dependencies.sh &&
+      ./start.sh"
+      # TODO: watch mode does not yet work for manager
+      # ./start-and-watch.sh"
   middleware:
     image: runcitadel/middleware
     build:
@@ -46,5 +46,7 @@ services:
       target: development
     volumes:
       - ../middleware:/app
-      - "/app/node_modules"
-    command: ''
+    command: sh -c "
+      ./install-dependencies.sh &&
+      ./wait-for-manager.sh $MANAGER_IP &&
+      ./start-and-watch.sh"
