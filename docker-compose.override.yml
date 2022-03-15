@@ -1,23 +1,51 @@
-version: "3.7"
+version: "3.8"
 
 services:
+  nginx:
+    ports:
+      # additional port for development
+      - 8000:8000
   dashboard:
     image: runcitadel/dashboard
     build:
       context: ../dashboard
-      # Todo: Do we need a separate Dockerfile for development of the dashboard or ui repos??
-      # dockerfile: Dockerfile.dev
+      target: development
     volumes:
       - ../dashboard:/app
+    environment:
+      DEVICE_HOSTNAME: ${DEVICE_HOSTNAME:-citadel-dev.local}
+  ui:
+    container_name: ui
+    image: runcitadel/ui
+    build:
+      context: ../ui
+      target: development
+    volumes:
+      - ../ui:/app
+    env_file:
+      - .env
+    networks:
+      default:
+        ipv4_address: $DASHBOARD_NEW_IP
   manager:
     image: runcitadel/manager
-    build: ../manager
+    build:
+      context: ../manager
+      target: development
     volumes:
-      # The following is required to correctly mount all services
-      # inside so they are accessible to docker-compose otherwise
-      # docker-in-docker fails becuase the compose file references
-      # build contexts that don't exist inside this container.
-      - ${PWD}/..:${PWD}/..
+      - ../manager:/app
+    command: sh -c "
+      ./install-dependencies.sh &&
+      ./start-and-watch.sh"
+      # TODO: watch mode does not yet work for manager
   middleware:
     image: runcitadel/middleware
-    build: ../middleware
+    build:
+      context: ../middleware
+      target: development
+    volumes:
+      - ../middleware:/app
+    command: sh -c "
+      ./install-dependencies.sh &&
+      ./wait-for-manager.sh $MANAGER_IP &&
+      ./start-and-watch.sh"

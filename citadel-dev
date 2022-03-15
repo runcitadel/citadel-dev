@@ -11,8 +11,8 @@ Usage: citadel-dev <command> [options]
 
 Commands:
     help                    Show this help message
-    init                    Initialize an Citadel development environment in the working directory
-    boot                    Boot the development VM
+    init [options]          Initialize an Citadel development environment in the working directory
+    boot [options]          Boot the development VM
     shutdown                Shutdown the development VM
     destroy                 Destroy the development VM
     containers              List container services
@@ -103,6 +103,29 @@ if [[ "$command" = "init" ]]; then
     exit 1
   fi
 
+  shift
+
+  branch=""
+  ssh=false
+
+  # parse arguments
+  for arg in "$@"
+  do
+    case "$1" in
+      -b|--branch)
+        branch=$2
+        shift 1
+        ;;
+      -s|--ssh)
+        ssh=true
+        shift 1
+        ;;
+      *)
+        shift 1
+        ;;
+    esac
+  done
+
   echo "Creating Vagrantfile..."
   cp "$(get_script_location)/Vagrantfile" .
 
@@ -114,7 +137,20 @@ if [[ "$command" = "init" ]]; then
   repos="runcitadel/core runcitadel/dashboard runcitadel/manager runcitadel/middleware runcitadel/sdk runcitadel/ui"
   for repo in $repos; do
     echo
-    git clone "https://github.com/$repo.git" "$repo"
+
+    if $ssh; then
+      url="git@github.com:$repo.git"
+    else
+      url="https://github.com/$repo.git"
+    fi
+
+    # TEMP: remove "branch" logic after merge
+    if [ -n "$branch" ] && [[ "$repo" != "runcitadel/sdk" ]]; then
+      git clone -b "$branch" "$url" "$repo"
+    else
+      git clone "$url" "$repo"
+    fi
+
     if [[ "$repo" == "runcitadel/core" ]]; then
       echo
       echo "Adding Docker Compose overrides to $repo..."
