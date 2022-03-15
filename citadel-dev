@@ -268,9 +268,11 @@ fi
 
 # Stream Citadel logs
 if [[ "$command" = "logs" ]]; then
+  shift
+  args="$@"
   check_citadel_dev_environment
   while true; do
-    run_in_vm "docker compose logs -f" || {
+    run_in_vm "docker compose logs -f $args" || {
       echo "$(date +"%T") Trying again in 1 second..."
     }
     sleep 1

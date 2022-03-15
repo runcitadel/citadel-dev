@@ -101,7 +101,7 @@ $msg = <<MSG
 
 
 Yarn is installing dependencies, this will take a few more minutes...
-Run `citadel-dev logs` to see progress.
+Run `citadel-dev logs dashboard manager middleware` to see progress.
 
 Citadel development environment will be ready at:
 
