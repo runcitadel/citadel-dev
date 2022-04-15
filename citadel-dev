@@ -147,7 +147,7 @@ if [[ "$command" = "init" ]]; then
   if $production; then
     repos="runcitadel/core"
   else
-    repos="runcitadel/core runcitadel/manager runcitadel/middleware runcitadel/dashboard runcitadel/ui runcitadel/sdk"
+    repos="runcitadel/core runcitadel/manager runcitadel/middleware runcitadel/dashboard runcitadel/ui runcitadel/sdk runcitadel/fs runcitadel/utils runcitadel/node-lndconnect runcitadel/bitcoin-rpc"
   fi
 
   for repo in $repos; do
