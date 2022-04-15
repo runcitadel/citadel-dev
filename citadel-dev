@@ -101,6 +101,7 @@ if [[ "$command" = "init" ]]; then
   shift
 
   directory=.
+  production=false
   ssh=false
 
   # parse arguments
@@ -111,7 +112,11 @@ if [[ "$command" = "init" ]]; then
         directory=$2
         shift 1
         ;;
-      -s|--ssh)
+      --production)
+        production=true
+        shift 1
+        ;;
+      --ssh)
         ssh=true
         shift 1
         ;;
@@ -138,7 +143,13 @@ if [[ "$command" = "init" ]]; then
 
   echo
   echo "Cloning container repositories..."
-  repos="runcitadel/core runcitadel/dashboard runcitadel/manager runcitadel/middleware runcitadel/sdk runcitadel/ui"
+
+  if $production; then
+    repos="runcitadel/core"
+  else
+    repos="runcitadel/core runcitadel/manager runcitadel/middleware runcitadel/dashboard runcitadel/ui runcitadel/sdk"
+  fi
+
   for repo in $repos; do
     echo
 
@@ -152,7 +163,7 @@ if [[ "$command" = "init" ]]; then
 
     git clone "$url" "$dir"
 
-    if [[ "$repo" == "runcitadel/core" ]]; then
+    if [[ $production == false ]] && [[ $repo == "runcitadel/core" ]]; then
       echo
       echo "Adding Docker Compose overrides to $repo..."
       cp "$(get_script_location)/docker-compose.override.yml" "$dir/"
