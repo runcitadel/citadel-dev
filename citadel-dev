@@ -322,7 +322,7 @@ if [[ "$command" = "lncli" ]]; then
   else
     args="${@:2}"
   fi
-  run_in_vm "docker exec -it lnd lncli ${args}"
+  run_in_vm "docker exec -it lightning lncli ${args}"
   exit
 fi
 
