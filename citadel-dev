@@ -2,7 +2,7 @@
 set -euo pipefail
 
 show_help() {
-  cat << EOF
+  cat <<EOF
 citadel-dev 1.2.1
 
 Automatically initialize and manage an Citadel development environment.
@@ -105,24 +105,23 @@ if [[ "$command" = "init" ]]; then
   ssh=false
 
   # parse arguments
-  for arg in "$@"
-  do
+  for arg in "$@"; do
     case "$1" in
-      -d| --directory)
-        directory=$2
-        shift 1
-        ;;
-      --production)
-        production=true
-        shift 1
-        ;;
-      --ssh)
-        ssh=true
-        shift 1
-        ;;
-      *)
-        shift 1
-        ;;
+    -d | --directory)
+      directory=$2
+      shift 1
+      ;;
+    --production)
+      production=true
+      shift 1
+      ;;
+    --ssh)
+      ssh=true
+      shift 1
+      ;;
+    *)
+      shift 1
+      ;;
     esac
   done
 
@@ -147,7 +146,17 @@ if [[ "$command" = "init" ]]; then
   if $production; then
     repos="runcitadel/core"
   else
-    repos="runcitadel/core runcitadel/manager runcitadel/middleware runcitadel/dashboard runcitadel/ui runcitadel/sdk runcitadel/fs runcitadel/utils runcitadel/node-lndconnect runcitadel/bitcoin-rpc"
+    repos="
+      runcitadel/core
+      runcitadel/manager
+      runcitadel/middleware
+      runcitadel/dashboard
+      runcitadel/ui
+      runcitadel/sdk
+      runcitadel/fs
+      runcitadel/utils
+      runcitadel/node-lndconnect
+      runcitadel/bitcoin-rpc"
   fi
 
   for repo in $repos; do
@@ -189,23 +198,23 @@ if [[ "$command" = "boot" ]]; then
   network="regtest"
 
   # parse arguments
-  for arg in "$@"
-  do
+  for arg in "$@"; do
     case "$arg" in
-      -n|--network)
-          case $2 in
-           "mainnet"|"testnet"|"signet"|"regtest")
-              network=$2
-              shift 1
-              ;;
-            *)
-              echo "Not a valid value for network"
-              exit 1
-          esac
-          ;;
-      *)
+    -n | --network)
+      case $2 in
+      "mainnet" | "testnet" | "signet" | "regtest")
+        network=$2
         shift 1
         ;;
+      *)
+        echo "Not a valid value for network"
+        exit 1
+        ;;
+      esac
+      ;;
+    *)
+      shift 1
+      ;;
     esac
   done
 
