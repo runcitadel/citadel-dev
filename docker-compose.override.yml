@@ -12,6 +12,7 @@ services:
       target: development
     volumes:
       - ../dashboard:/app
+      - ../sdk:/sdk
     environment:
       DEVICE_HOSTNAME: ${DEVICE_HOSTNAME:-citadel-dev.local}
   ui:
@@ -22,6 +23,7 @@ services:
       target: development
     volumes:
       - ../ui:/app
+      - ../sdk:/sdk
     env_file:
       - .env
     networks:
@@ -34,6 +36,10 @@ services:
       target: development
     volumes:
       - ../manager:/app
+      - ../sdk:/sdk
+      - ../fs:/fs
+      - ../utils:/utils
+      - ../node-lndconnect:/node-lndconnect
     command: sh -c "
       ./install-dependencies.sh &&
       ./start-and-watch.sh"
@@ -45,6 +51,9 @@ services:
       target: development
     volumes:
       - ../middleware:/app
+      - ../fs:/fs
+      - ../utils:/utils
+      - ../bitcoin-rpc:/bitcoin-rpc
     command: sh -c "
       ./install-dependencies.sh &&
       ./wait-for-manager.sh $MANAGER_IP &&
