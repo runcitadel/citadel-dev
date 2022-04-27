@@ -5,7 +5,7 @@
 ### Clone with Git
 
 ```
-git clone https://github.com/runcitadel/citadel-dev.git#docker-in-docker
+git clone -b docker-in-docker https://github.com/runcitadel/citadel-dev
 ```
 
 ### Build the image
