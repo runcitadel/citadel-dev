@@ -1,40 +1,141 @@
-FROM debian:11
+FROM ubuntu:jammy as systemd
 
-RUN set -eux; \
-	apt update; \
-	apt install -y --no-install-recommends \
-		ca-certificates \
-		iptables \
-		openssl \
-		pigz \
-		xz-utils \
-		sudo \
-		iproute2 \
-		curl \
-		wget \
-		git \
-	;
-	# rm -rf /var/lib/apt/lists/*
+#
+# Systemd installation
+#
+RUN apt-get update &&                            \
+    apt-get install -y --no-install-recommends   \
+            systemd                              \
+            systemd-sysv                         \
+            libsystemd0                          \
+            ca-certificates                      \
+            dbus                                 \
+            iptables                             \
+            iproute2                             \
+            kmod                                 \
+            locales                              \
+            sudo                                 \
+            udev &&                              \
+                                                 \
+    # Prevents journald from reading kernel messages from /dev/kmsg
+    echo "ReadKMsg=no" >> /etc/systemd/journald.conf &&               \
+                                                                      \
+    # Housekeeping
+    apt-get clean -y &&                                               \
+    rm -rf                                                            \
+       /var/cache/debconf/*                                           \
+       /var/lib/apt/lists/*                                           \
+       /var/log/*                                                     \
+       /tmp/*                                                         \
+       /var/tmp/*                                                     \
+       /usr/share/doc/*                                               \
+       /usr/share/man/*                                               \
+       /usr/share/local/* &&                                          \
+                                                                      \
+    # Create default user
+    useradd --create-home --shell /bin/bash citadel &&                \
+    echo "citadel:freedom" | chpasswd && adduser citadel sudo
 
-ENV DOCKER_TLS_CERTDIR=/certs
-RUN mkdir /certs /certs/client && chmod 1777 /certs /certs/client
 
-COPY --from=docker:20.10.5-dind /usr/local/bin/ /usr/local/bin/
+FROM systemd as docker
 
-VOLUME /var/lib/docker
+# Docker install
+RUN apt-get update && apt-get install --no-install-recommends -y      \
+       apt-transport-https                                            \
+       ca-certificates                                                \
+       curl                                                           \
+       gnupg-agent                                                    \
+       software-properties-common &&                                  \
+                                                                      \
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg           \
+         | apt-key add - &&                                           \
+	                                                                  \
+    apt-key fingerprint 0EBFCD88 &&                                   \
+                                                                      \
+    add-apt-repository                                                \
+       "deb [arch=amd64] https://download.docker.com/linux/ubuntu     \
+       $(lsb_release -cs)                                             \
+       stable" &&                                                     \
+                                                                      \
+    apt-get update && apt-get install --no-install-recommends -y      \
+       docker-ce docker-ce-cli containerd.io &&                       \
+                                                                      \
+    # Housekeeping
+    apt-get clean -y &&                                               \
+    rm -rf                                                            \
+       /var/cache/debconf/*                                           \
+       /var/lib/apt/lists/*                                           \
+       /var/log/*                                                     \
+       /tmp/*                                                         \
+       /var/tmp/*                                                     \
+       /usr/share/doc/*                                               \
+       /usr/share/man/*                                               \
+       /usr/share/local/* &&                                          \
+                                                                      \
+    # Add user "citadel" to the Docker group
+    usermod -a -G docker citadel
 
-# Install Compose V2
-RUN mkdir -p /usr/local/lib/docker/cli-plugins/
-RUN curl -SL https://github.com/docker/compose/releases/download/v2.4.1/docker-compose-linux-x86_64 -o /usr/local/lib/docker/cli-plugins/docker-compose
-RUN chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+# Install Docker Compose V2
+RUN mkdir -p /usr/local/lib/docker/cli-plugins/ &&                                                   \
+	curl -SL https://github.com/docker/compose/releases/download/v2.5.0/docker-compose-linux-x86_64  \ 
+         -o /usr/local/lib/docker/cli-plugins/docker-compose &&                                      \
+	chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+
+# Sshd install
+RUN apt-get update && apt-get install --no-install-recommends -y      \
+            openssh-server &&                                         \
+    mkdir /home/citadel/.ssh &&                                       \
+    chown citadel:citadel /home/citadel/.ssh
+
+EXPOSE 22
+
+# Make use of stopsignal (instead of sigterm) to stop systemd containers.
+STOPSIGNAL SIGRTMIN+3
+
+# Set systemd as entrypoint.
+ENTRYPOINT [ "/sbin/init", "--log-level=err" ]
+
+
+FROM docker as citadel
 
 # Install Citadel
-RUN apt install -y fswatch rsync jq python3-dacite python3-semver python3-jsonschema python3-yaml python3-requests
-RUN git clone https://github.com/runcitadel/core.git ./citadel
-RUN sudo NETWORK=regtest /citadel/scripts/configure
-# RUN cd /citadel/core/; \
-# 	docker compose up --detach --build --remove-orphans
+RUN apt-get update &&                                                          \
+    apt-get install -y --no-install-recommends                                 \
+            git                                                                \
+            xxd                                                                \
+            net-tools                                                          \
+            vim                                                                \
+            wget                                                               \
+            fswatch                                                            \
+            rsync                                                              \
+            jq                                                                 \
+            python3-dacite                                                     \
+            python3-semver                                                     \
+            python3-jsonschema                                                 \
+            python3-yaml                                                       \
+            python3-requests &&                                                \
+                                                                               \
+    git clone https://github.com/runcitadel/core.git /home/citadel/citadel &&  \
+    chown -R 1000:1000 /home/citadel/citadel &&                                \
+                                                                               \
+    # Housekeeping
+    apt-get clean -y &&                                                        \
+    rm -rf                                                                     \
+       /var/cache/debconf/*                                                    \
+       /var/lib/apt/lists/*                                                    \
+       /var/log/*                                                              \
+       /tmp/*                                                                  \
+       /var/tmp/*                                                              \
+       /usr/share/doc/*                                                        \
+       /usr/share/man/*                                                        \
+       /usr/share/local/*
 
-ENTRYPOINT ["dockerd-entrypoint.sh"]
-CMD []
-# CMD cd /citadel/core/; docker compose up --detach --build --remove-orphans
+# Enable citadel.service
+COPY citadel-startup.sh /usr/bin/
+COPY citadel.service /lib/systemd/system/
+RUN chmod +x /usr/bin/citadel-startup.sh &&                                    \
+    ln -sf /lib/systemd/system/citadel.service                                 \
+    /etc/systemd/system/multi-user.target.wants/citadel.service
+
+# Set systemd as entrypoint.
+ENTRYPOINT [ "/sbin/init", "--log-level=err" ]

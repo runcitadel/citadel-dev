@@ -1,0 +1,15 @@
+[Unit]
+Description=Node Service
+After=docker.service
+StartLimitIntervalSec=0
+
+[Service]
+Type=forking
+Restart=always
+RestartSec=1
+ExecStart=/usr/bin/citadel-startup.sh
+ExecReload=/usr/bin/citadel-startup.sh
+ExecStop=/citadel/scripts/stop
+
+[Install]
+WantedBy=multi-user.target
