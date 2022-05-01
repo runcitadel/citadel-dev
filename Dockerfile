@@ -76,9 +76,9 @@ RUN apt-get update && apt-get install --no-install-recommends -y      \
     usermod -a -G docker citadel
 
 # Install Docker Compose V2
-RUN mkdir -p /usr/local/lib/docker/cli-plugins/ &&                                                   \
-	curl -SL https://github.com/docker/compose/releases/download/v2.5.0/docker-compose-linux-x86_64  \ 
-         -o /usr/local/lib/docker/cli-plugins/docker-compose &&                                      \
+RUN mkdir -p /usr/local/lib/docker/cli-plugins/ &&                                                                  \
+	curl -SL "https://github.com/docker/compose/releases/download/v2.5.0/docker-compose-$(uname -s)-$(uname -m)"    \ 
+         -o /usr/local/lib/docker/cli-plugins/docker-compose &&                                                     \
 	chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 
 # Sshd install
@@ -130,11 +130,9 @@ RUN apt-get update &&                                                          \
        /usr/share/man/*                                                        \
        /usr/share/local/*
 
-# Enable citadel.service
-COPY citadel-startup.sh /usr/bin/
+# Start Citadel with systemd
 COPY citadel.service /lib/systemd/system/
-RUN chmod +x /usr/bin/citadel-startup.sh &&                                    \
-    ln -sf /lib/systemd/system/citadel.service                                 \
+RUN ln -sf /lib/systemd/system/citadel.service                                 \
     /etc/systemd/system/multi-user.target.wants/citadel.service
 
 # Set systemd as entrypoint.
