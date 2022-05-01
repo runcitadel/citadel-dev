@@ -57,6 +57,8 @@ Commands:
     start                   Start the container
     stop                    Stop the container
     reload                  Reloads the Citadel service
+    backup                  Backup the container
+    restore <path>          Restore a backup
     destroy                 Destroy the container
     ssh <command>           Get an SSH session inside the container
     run <command>           Run a command inside the container

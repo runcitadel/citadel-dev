@@ -17,6 +17,8 @@ Commands:
     start                   Start the container
     stop                    Stop the container
     reload                  Reloads the Citadel service
+    backup                  Backup the container
+    restore <path>          Restore a backup
     destroy                 Destroy the container
     ssh <command>           Get an SSH session inside the container
     run <command>           Run a command inside the container
@@ -247,20 +249,22 @@ if [[ "$command" = "boot" ]]; then
     esac
   done
 
-  # docker run --runtime sysbox-runc --env NETWORK=$network -it -P --name citadel --hostname citadel citadel
-  docker run --runtime sysbox-runc --env NETWORK=$network -d -P --name citadel --hostname citadel citadel &>/dev/null ||
-    read -p "The container exists already. Do you want to start it? (y/n) " -n 1 -r &&
+  echo "Starting Citadel..."
+
+  docker run --runtime sysbox-runc --env NETWORK=$network -d -P --name citadel --hostname citadel citadel &>/dev/null || {
+    read -p "The container exists already. Do you want to start it? (y/N) " should_start
     echo
-  if [[ $REPLY =~ ^[Yy]$ ]]; then
-    citadel-dev start
-  else
-    exit 1
-  fi
+    if [[ $should_start =~ [Yy]$ ]]; then
+      citadel-dev start
+    else
+      exit 1
+    fi
+  }
 
   show_welcome $network $(get_container_ip)
-  read -p "Do you want to log into the container now? (y/n) " -n 1 -r
+  read -p "Do you want to log into the container now? (y/N) " should_login
   echo
-  if [[ $REPLY =~ ^[Yy]$ ]]; then
+  if [[ $should_login =~ [Yy]$ ]]; then
     citadel-dev ssh
   fi
 
@@ -300,9 +304,9 @@ if [[ "$command" = "destroy" ]]; then
   check_citadel_environment
   echo "Warning: This will completely remove the container meaning it needs to be recreated on next boot."
   echo "If you just want to stop the container run: citadel-dev stop"
-  read -p "Are you sure? (y/n) " -n 1 -r
+  read -p "Are you sure? (y/N) "
   echo
-  if [[ $REPLY =~ ^[Yy]$ ]]; then
+  if [[ $REPLY =~ [Yy]$ ]]; then
     echo "Removing container..."
     docker rm -f citadel &>/dev/null
     echo "Citadel container destroyed"
@@ -346,6 +350,68 @@ if [[ "$command" = "reload" ]]; then
     && sudo scripts/configure  \
     && sudo scripts/start"
   exit
+fi
+
+# Backup the container
+if [[ "$command" = "backup" ]]; then
+  check_citadel_environment
+
+  current_date=$(date '+%Y-%m-%d')
+
+  echo "Stopping Citadel..."
+  run_in_container "scripts/stop" &>/dev/null
+  echo "Creating snapshot..."
+  docker commit citadel citadel-backup:${current_date}
+  echo "Backing up..."
+  docker save citadel-backup:${current_date} | gzip >citadel-backup-${current_date}.tar.gz
+  echo "Cleaning up..."
+  docker rmi citadel-backup:${current_date} &>/dev/null
+  echo "Done! Backup saved to ./citadel-backup-${current_date}.tar.gz"
+  exit
+fi
+
+# Restore a backup
+if [[ "$command" = "restore" ]]; then
+  check_citadel_environment
+
+  backup_date=${2:17:10}
+
+  # check for current container
+  docker inspect citadel &>/dev/null || {
+    # load & rename
+    echo "Restoring from backup $2..."
+    docker load <$2
+    docker tag citadel-backup:${backup_date} citadel
+    echo "Cleaning up..."
+    docker rmi citadel-backup:${backup_date} &>/dev/null
+    read -p "Backup restored successfully. Do you want to boot it now? (y/N) " should_boot
+    echo
+    if [[ $should_boot =~ [Yy]$ ]]; then
+      citadel-dev boot
+      exit
+    else
+      echo "All done."
+      exit
+    fi
+    exit
+  }
+
+  read -p "Found existing Citadel installation. Do you want to overwrite it? (y/N) " should_overwrite
+  echo
+  if [[ $should_overwrite =~ [Yy]$ ]]; then
+    echo "Destroying current Citadel..."
+    docker rm citadel &>/dev/null || {
+      echo 'Citadel is still running. Stop it and try again.'
+      exit
+    }
+    docker rmi citadel &>/dev/null
+    echo "Citadel image destroyed."
+    citadel-dev restore $2
+    exit
+  else
+    echo "Cancelled"
+    exit
+  fi
 fi
 
 # Rebuild a container service
