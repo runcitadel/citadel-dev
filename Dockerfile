@@ -12,6 +12,7 @@ RUN apt-get update &&                            \
             dbus                                 \
             iptables                             \
             iproute2                             \
+            avahi-daemon                         \
             kmod                                 \
             locales                              \
             sudo                                 \

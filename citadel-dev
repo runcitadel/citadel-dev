@@ -69,7 +69,9 @@ show_welcome() {
 
 Citadel is starting up with Bitcoin network set to ${1}.
 
-Dashboard will be ready at http://${2}
+Dashboard will be ready at: 
+  - http://${2}.local
+  - http://${3}
 
 --------------------------------------------------------------------------------
 EOF
@@ -124,6 +126,10 @@ check_citadel_environment() {
 
 get_container_ip() {
   echo $(docker inspect citadel | jq -r '.[]|"\(.NetworkSettings.Networks[].IPAddress|select(length > 0) // "# no ip address:")"')
+}
+
+get_container_hostname() {
+  echo $(docker inspect citadel | jq -r '.[]|"\(.Config.Hostname)"')
 }
 
 # Check deps before running any commands
@@ -227,6 +233,7 @@ if [[ "$command" = "boot" ]]; then
 
   # default values
   network="regtest"
+  hostname="citadel-dev"
 
   # parse arguments
   for arg in "$@"; do
@@ -251,7 +258,7 @@ if [[ "$command" = "boot" ]]; then
 
   echo "Starting Citadel..."
 
-  docker run --runtime sysbox-runc --env NETWORK=$network -d -P --name citadel --hostname citadel citadel &>/dev/null || {
+  docker run --runtime sysbox-runc --env NETWORK=$network -d -P --name citadel --hostname $hostname citadel &>/dev/null || {
     read -p "The container exists already. Do you want to start it? (y/N) " should_start
     echo
     if [[ $should_start =~ [Yy]$ ]]; then
@@ -261,7 +268,7 @@ if [[ "$command" = "boot" ]]; then
     fi
   }
 
-  show_welcome $network $(get_container_ip)
+  show_welcome $network $hostname $(get_container_ip)
   read -p "Do you want to log into the container now? (y/N) " should_login
   echo
   if [[ $should_login =~ [Yy]$ ]]; then
@@ -274,7 +281,14 @@ fi
 # Show the container IP
 if [[ "$command" = "info" ]]; then
   check_citadel_environment
-  echo "Citadel Dashboard is accessible at http://$(get_container_ip)"
+
+  cat <<EOF
+Citadel Dashboard is accessible at the following URLs:
+
+  - http://$(get_container_hostname).local
+  - http://$(get_container_ip)
+
+EOF
   exit
 fi
 
