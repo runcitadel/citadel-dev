@@ -372,8 +372,11 @@ if [[ "$command" = "backup" ]]; then
 
   current_date=$(date '+%Y-%m-%d')
 
-  echo "Stopping Citadel..."
-  run_in_container "scripts/stop" &>/dev/null
+  echo "Stopping Citadel services..."
+  run_in_container "scripts/stop" &>/dev/null || {
+    echo "No container found."
+    exit
+  }
   echo "Creating snapshot..."
   docker commit citadel citadel-backup:${current_date}
   echo "Backing up..."
