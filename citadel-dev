@@ -2,6 +2,7 @@
 set -euo pipefail
 
 cli_name="$(basename $0)"
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
 
 show_help() {
   cat <<EOF
@@ -298,14 +299,14 @@ fi
 # Install dependencies
 if [[ "$command" = "install" ]]; then
   # build Citadel Docker image
-  docker build -t citadel .
+  docker build -t citadel $script_dir/..
 
   # install Docker
   echo 'Installing Docker...'
   if command -v "docker" >/dev/null 2>&1; then
     echo 'Docker is already installed. Skipping...'
   else
-    sudo ./scripts/install-docker.sh
+    sudo $script_dir/../scripts/install-docker.sh
   fi
 
   # install Sysbox
@@ -313,7 +314,7 @@ if [[ "$command" = "install" ]]; then
   if command -v "sysbox" >/dev/null 2>&1; then
     echo 'Sysbox is already installed. Skipping...'
   else
-    sudo ./scripts/install-sysbox.sh
+    sudo $script_dir/../scripts/install-sysbox.sh
   fi
 
   exit
