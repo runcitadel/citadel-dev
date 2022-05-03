@@ -16,94 +16,36 @@ Sysbox enables us to do this in a way that is **easy and secure**. The inner Doc
 ### Clone this repository
 
 ```
-git clone -b docker-in-docker --depth=1 https://github.com/runcitadel/citadel-dev.git ~/.citadel-dev
+$ git clone -b docker-in-docker --depth=1 https://github.com/runcitadel/citadel-dev.git ~/.citadel-dev
 ```
 
-### Update Shell Profile
+### Update shell profile
 
 ```
-export PATH="$PATH:$HOME/.citadel-dev/bin"
+$ export PATH="$PATH:$HOME/.citadel-dev/bin"
 ```
 
-### Build the image
+### Install required dependencies
 
 ```
-docker build -t citadel .
+$ citadel-dev install
 ```
 
-### Run the container
+### Start a Citadel container
 
 ```
-citadel-dev boot
+$ citadel-dev boot
 ```
 
 Login in with the default Citadel credentials (user: _citadel_, password: _freedom_)
 
 ## Usage
 
+To see all possible commands:
+
 ```
-$ citadel-dev
-citadel-dev 1.3.0
-
-Automatically initialize and manage isolated Citadel instances.
-
-Usage: citadel-dev <command> [options]
-
-Commands:
-    help                    Show this help message
-    init [options]          Initialize a Citadel environment in the working directory
-    boot [options]          Start the container
-    info                    Show the container IP
-    start                   Start the container
-    stop                    Stop the container
-    reload                  Reloads the Citadel service
-    backup                  Backup the container
-    restore <path>          Restore a backup
-    destroy                 Destroy the container
-    ssh <command>           Get an SSH session inside the container
-    run <command>           Run a command inside the container
-    containers              List container services
-    rebuild <container>     Rebuild a container service
-    app <command> [options] Manages apps installations
-    logs                    Stream Citadel logs
-    bitcoin-cli <command>   Run bitcoin-cli with arguments
-    lncli <command>         Run lncli with arguments
-    auto-mine <seconds>     Generate a block continuously
+$ citadel-dev help
 ```
-
-### Funding the Lightning wallet (development only)
-
-1. Create a wallet with Bitcoin core:
-
-```shell
-$ citadel-dev bitcoin-cli createwallet "mywallet"
-```
-
-2. Generate some blocks to get funds:
-
-```shell
-$ citadel-dev bitcoin-cli -generate 101
-```
-
-3. Generate a new address with LND:
-
-```shell
-$ citadel-dev lncli -n regtest newaddress p2wkh
-```
-
-4. Send some funds to the new address:
-
-```shell
-$ citadel-dev bitcoin-cli -named sendtoaddress address="<my-address>" amount=0.5 fee_rate=1 replaceable=true
-```
-
-5. Mine some blocks to confirm the transaction:
-
-```shell
-$ citadel-dev bitcoin-cli -generate 6
-```
-
-6. You should now be able to open channels with other nodes in your network
 
 ## License
 
