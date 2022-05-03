@@ -31,6 +31,7 @@ Commands:
     logs                    Stream Citadel logs
     bitcoin-cli <command>   Run bitcoin-cli with arguments
     lncli <command>         Run lncli with arguments
+    fund <amount>           Fund the onchain wallet
     auto-mine <seconds>     Generate a block continuously
 EOF
 }
@@ -96,11 +97,6 @@ check_dependencies() {
   done
 }
 
-# Run a command inside the container
-run_in_container() {
-  docker exec -it citadel bash -c "cd /home/citadel/citadel && $1"
-}
-
 # Get script location and correctly handle any symlinks
 get_script_location() {
   source="${BASH_SOURCE[0]}"
@@ -134,6 +130,23 @@ get_container_ip() {
 
 get_container_hostname() {
   echo $(docker inspect citadel | jq -r '.[]|"\(.Config.Hostname)"')
+}
+
+# Run a command inside the container
+run_in_container() {
+  docker exec -it citadel bash -c "cd /home/citadel/citadel && $1"
+}
+
+# Check_node_network
+check_node_network() {
+  # Check network
+  network_line=$(run_in_container "cat .env | grep BITCOIN_NETWORK")
+  network=${network_line:16}
+
+  if [[ "$network" == *"mainnet"* ]]; then
+    echo "This command doesn't work on mainnet."
+    exit 1
+  fi
 }
 
 # Check deps before running any commands
@@ -504,7 +517,7 @@ if [[ "$command" = "bitcoin-cli" ]]; then
   else
     args="${@:2}"
   fi
-  run_in_container "docker exec -it bitcoin bitcoin-cli ${args}"
+  run_in_container "docker exec -t bitcoin bitcoin-cli ${args}"
   exit
 fi
 
@@ -516,19 +529,52 @@ if [[ "$command" = "lncli" ]]; then
   else
     args="${@:2}"
   fi
-  run_in_container "docker exec -it lightning lncli ${args}"
+  run_in_container "docker exec -t lightning lncli ${args}"
+  exit
+fi
+
+# Fund the wallet
+if [[ "$command" = "fund" ]]; then
+  check_citadel_environment
+  check_node_network
+
+  # default to 1 BTC
+  amount=${2:-1}
+
+  # Check for existing wallet
+  $cli_name bitcoin-cli unloadwallet "mywallet" &>/dev/null || true
+  $cli_name bitcoin-cli loadwallet "mywallet" &>/dev/null || {
+    # Create a wallet if it doesn't exist
+    $cli_name bitcoin-cli createwallet "mywallet"
+  }
+
+  # Generate some blocks to get funds
+  $cli_name bitcoin-cli -generate 101
+
+  # Generate a new address with LND
+  address=$($cli_name lncli --network regtest newaddress p2wkh | jq -r '.address')
+
+  # Send some funds to the new address
+  $cli_name bitcoin-cli -named sendtoaddress address=$address amount=$amount fee_rate=1 replaceable=true
+
+  # Mine some blocks to confirm the transaction
+  $cli_name bitcoin-cli -generate 6
+
+  printf "\nAddress $address successfully funded with $amount BTC.\n"
   exit
 fi
 
 # Generate a block continuously
 if [[ "$command" = "auto-mine" ]]; then
   check_citadel_environment
+  check_node_network
+
   if [ -z ${2+x} ]; then
     echo "Missing argument: Specify an interval in seconds"
     exit 1
   fi
   echo "Generating a block every $2 seconds. Press [CTRL+C] to stop..."
-  run_in_container "while true; do docker exec -it bitcoin bitcoin-cli -generate 1; sleep $2; done"
+  run_in_container "while true; do docker exec -t bitcoin bitcoin-cli -generate 1; sleep $2; done"
   exit
 fi
 
