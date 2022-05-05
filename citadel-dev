@@ -1,157 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-cli_name="$(basename $0)"
-script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
+source $(dirname $0)/../functions.sh
+source $(dirname $0)/../spinner.sh
+source $(dirname $0)/../utils.sh
 
-show_help() {
-  cat <<EOF
-${cli_name} 1.3.0
-
-Automatically initialize and manage isolated Citadel instances.
-
-Usage: ${cli_name} <command> [options]
-
-Commands:
-    help                    Show this help message
-    init [options]          Initialize a Citadel environment in the working directory
-    install                 Builds the image and installs Docker + Sysbox
-    boot [options]          Start the container
-    info                    Show the container IP
-    start                   Start the container
-    stop                    Stop the container
-    reload                  Reloads the Citadel service
-    backup                  Backup the container
-    restore <path>          Restore a backup
-    destroy                 Destroy the container
-    ssh <command>           Get an SSH session inside the container
-    run <command>           Run a command inside the container
-    containers              List container services
-    rebuild <container>     Rebuild a container service
-    app <command> [options] Manages apps installations
-    logs                    Stream Citadel logs
-    bitcoin-cli <command>   Run bitcoin-cli with arguments
-    lncli <command>         Run lncli with arguments
-    fund <amount>           Fund the onchain wallet
-    auto-mine <seconds>     Generate a block continuously
-EOF
-}
-
-show_welcome() {
-  cat <<EOF
-,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,*(#%%(*,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,**/(###(/#&&&%#(/**,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,,,,,,,,*(((((//*,,,#@@@@&&&%#((*,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,,,,,,*/(%(**,,,,,,,#@@@@@@@@@%(/,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,,,,,,*/(%/,,,,,,,,,#@@@@@@@@@%(*,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,**/(##/*,,,,*/(%/,,,**/(#%%&&&&@@@@@%(*,,,,,*/#&%(/**,,,,,,,,,,,,,,
-,,,,,,,,,*/(((((/*,,,,,,,*(##(/(##%%%#(%&&&&&&&&&%(/**,,,/(%@@&&&%#(/*,,,,,,,,,,
-,,,,,*/(%%#(**,,,,,,,*/(#%&&&&&%%#(/**,#@@@&&&&&&&&&&%#(//(%@@@@@@@&%%%(**,,,,,,
-,,,,,(%&&&%%%(*,,,,/(%&&&&&&&#/*,,,,,,,#@@@@@@@&&&&&&&&&&&%&@@@@&&%%%(/*,*,,,,,,
-,,,,,(%&@@@@&&&%#(/#%&&%%#/*,,,,,,,,,,,#@@@@@@@@@@@&&&&&&&%&&%%##(/*,,,,,*,,,,,,
-,,,,,(%&@@@@@@@@&&%#((/*,,,,,,,,,,,,,,,#@@@@@@@@@@@@@@@@&&&%%(/*,,,,,,,,,*,,,,,,
-,,,,,(%&@@@@@@@@@&#/,,,,,,,,,,,,,,,,,,,#@@@@@@@@@@@@@@@@@@@%(/,,,,,,,,,,,*,,,,,,
-,,,,,(%&@@@@@@@@@&#(/**,,,*(%##/,,,,,,,#@@@@@@@&%%%&&@@@@&&%(/,,,,,,,,,,,*,,,,,,
-,,,,,(%&@@@@@@@@@&###%&%#((%@&&&&%(/**,#@@@&%%%#(*,(%%%&&&%#(/,,,,,,,,,,,*,,,,,,
-,,,,,(%&@@@@@@@@@@&%%&&&&&%&@@@@@@&&&%##%##(/*,,,,,/%%&&&%#(**,,,,,,,,,,,*,,,,,,
-,,,,,(%&@@@@@@@@@@@@@@@&%%%&@@@@@@@@@@@#**,,,,,,,,,/%%%(/**,,,,,,,,,,,,,,*,,,,,,
-,,,,,(%&@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,*,,,,,,
-,,,,,(%&@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,*,,,,,,
-,,,,,(%&@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,*,,,,,,
-,,,,,(%&@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,*,,,,,,
-,,,,,(%&@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,*,,,,,,
-,,,,,/%&@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,*,,,,,,
-,,,,,*(%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,*,,,,,,
-,,,,,,,#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-,,,,,,,*/#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,*,,,,,,,,
-,,,,,,,,,*/#&&@@@@@@@@@@@@@@@@@@@@@@@@@#,,,,,,,,,,,,,,,,,,,,,,,,,,,,*,,,,,,,,,,,
-,,,,,,,,,,,,*/(#%&@@@@@@@@@@@@@@@@@@@@@#,,,,,,,,,,,,,,,,,,,,,,,,,*,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,**/(%&@@@@@@@@@@@@@@@@@#,,,,,,,,,,,,,,,,,,,,,,*,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,,,*(%&@@@@@@@@@@@@@#,,,,,,,,,,,,,,,,,,,*,,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,,,,,,**(%%&@@@@@@@@#,,,,,,,,,,,,,,,*,,,,,,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,,,,,,,,,,**(#%&@@@@#,,,,,,,,,,,,*,,,,,,,,,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,*/(#&(,,,,,,,,*,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-
-Citadel is starting up with Bitcoin network set to ${1}.
-
-Dashboard will be ready at: 
-  - http://${2}.local
-  - http://${3}
-
---------------------------------------------------------------------------------
-EOF
-}
-
-# Check required dependencies are installed
-# If not, fail with instructions on how to fix
-check_dependencies() {
-  for cmd in "git" "docker" "sysbox"; do
-    if ! command -v $cmd >/dev/null 2>&1; then
-      echo "This script requires Git, Docker and Sysbox to be installed."
-      echo
-      echo "See:"
-      echo "  - Git: https://git-scm.com/downloads"
-      echo "  - Docker: https://docs.docker.com/get-docker/"
-      echo "  - Sysbox: https://github.com/nestybox/sysbox/blob/master/docs/user-guide/install-package.md"
-      exit 1
-    fi
-  done
-}
-
-# Get script location and correctly handle any symlinks
-get_script_location() {
-  source="${BASH_SOURCE[0]}"
-  # Resolve $source until the file is no longer a symlink
-  while [ -h "$source" ]; do
-    dir="$(cd -P "$(dirname "$source")" >/dev/null 2>&1 && pwd)"
-    source="$(readlink "$source")"
-    # If $source was a relative symlink, we need to resolve it relative to the path where the symlink file was located
-    [[ $source != /* ]] && source="$dir/$source"
-  done
-  dir="$(cd -P "$(dirname "$source")" >/dev/null 2>&1 && pwd)"
-  echo $dir
-}
-
-# TODO
-check_citadel_environment() {
-  filename=".$cli_name"
-  dir=$PWD
-  # while [ ! -e "$dir/$filename" ]; do
-  #   dir=${dir%/*}
-  #   if [[ "$dir" = "" ]]; then
-  #     echo "Error: This doesn't seem to be an $cli_name environment."
-  #     exit 1
-  #   fi
-  # done
-}
-
-get_container_ip() {
-  echo $(docker inspect citadel | jq -r '.[]|"\(.NetworkSettings.Networks[].IPAddress|select(length > 0) // "# no ip address:")"')
-}
-
-get_container_hostname() {
-  echo $(docker inspect citadel | jq -r '.[]|"\(.Config.Hostname)"')
-}
-
-# Run a command inside the container
-run_in_container() {
-  docker exec -it citadel bash -c "cd /home/citadel/citadel && $1"
-}
-
-# Check_node_network
-check_node_network() {
-  # Check network
-  network_line=$(run_in_container "cat .env | grep BITCOIN_NETWORK")
-  network=${network_line:16}
-
-  if [[ "$network" == *"mainnet"* ]]; then
-    echo "This command doesn't work on mainnet."
-    exit 1
-  fi
-}
-
-# Check deps before running any commands
-check_dependencies
+CLI_NAME="$(basename $0)"
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
+IMAGE_NAME=citadel
+CONTAINER_NAME=citadel
 
 if [ -z ${1+x} ]; then
   command=""
@@ -159,94 +16,36 @@ else
   command="$1"
 fi
 
-# Initialize a Citadel environment in the working directory
-if [[ "$command" = "init" ]]; then
-  shift
-
-  directory=.
-  production=false
-  ssh=false
-
-  # parse arguments
-  for arg in "$@"; do
-    case "$1" in
-    -d | --directory)
-      directory=$2
-      shift 1
-      ;;
-    --production)
-      production=true
-      shift 1
-      ;;
-    --ssh)
-      ssh=true
-      shift 1
-      ;;
-    *)
-      shift 1
-      ;;
-    esac
-  done
-
-  # create directory
-  mkdir -p $directory
-
-  if [[ "$(ls -A $directory)" ]]; then
-    echo "Working directory must be empty!"
-    exit 1
-  fi
-
-  echo
-  echo "Cloning container repositories..."
-
-  if $production; then
-    repos="runcitadel/core"
+# Install dependencies
+if [[ "$command" = "install" ]]; then
+  # install Docker
+  echo 'Installing Docker...'
+  if command -v "docker" >/dev/null 2>&1; then
+    echo 'Docker is already installed. Skipping...'
   else
-    repos="
-      runcitadel/core
-      runcitadel/manager
-      runcitadel/middleware
-      runcitadel/dashboard
-      runcitadel/ui
-      runcitadel/sdk
-      runcitadel/fs
-      runcitadel/utils
-      runcitadel/node-lndconnect
-      runcitadel/bitcoin-rpc"
+    sudo $SCRIPT_DIR/../scripts/install-docker.sh
   fi
 
-  for repo in $repos; do
-    echo
+  # install Sysbox
+  echo 'Installing Sysbox...'
+  if command -v "sysbox" >/dev/null 2>&1; then
+    echo 'Sysbox is already installed. Skipping...'
+  else
+    sudo $SCRIPT_DIR/../scripts/install-sysbox.sh
+  fi
 
-    dir="$directory/$repo"
+  # build Citadel Docker image
+  echo 'Building Docker image...'
+  docker build -t $IMAGE_NAME $SCRIPT_DIR/..
 
-    if $ssh; then
-      url="git@github.com:$repo.git"
-    else
-      url="https://github.com/$repo.git"
-    fi
-
-    git clone "$url" "$dir"
-
-    if [[ $production == false ]] && [[ $repo == "runcitadel/core" ]]; then
-      echo
-      echo "Adding Docker Compose overrides to $repo..."
-      cp "$(get_script_location)/docker-compose.override.yml" "$dir/"
-    fi
-  done
-
-  touch "$directory/.citadel-dev"
-
-  printf "\n\nYour environment is now setup\n\n"
-  printf "You can start your Citadel with:\n\n"
-  printf "  citadel-dev boot"
-
+  echo 'Citadel dependencies installed successfully.'
   exit
 fi
 
 # Boot the container
 if [[ "$command" = "boot" ]]; then
-  check_citadel_environment
+  check_dependencies
+
   shift
 
   # default values
@@ -274,47 +73,27 @@ if [[ "$command" = "boot" ]]; then
     esac
   done
 
-  echo "Starting Citadel..."
+  echo "Booting..."
 
-  docker run --runtime sysbox-runc --env NETWORK=$network -d -P --name citadel --hostname $hostname citadel &>/dev/null || {
+  docker run --runtime sysbox-runc --env NETWORK=$network -d -P --name $CONTAINER_NAME --hostname $hostname $IMAGE_NAME &>/dev/null || {
     read -p "The container exists already. Do you want to start it? (y/N) " should_start
     echo
     if [[ $should_start =~ [Yy]$ ]]; then
-      $cli_name start
+      $CLI_NAME start
     else
       exit 1
     fi
   }
 
+  start_spinner "Citadel is spinning up containers... This will only take a minute."
+  wait_for_dashboard
+  stop_spinner $?
+
   show_welcome $network $hostname $(get_container_ip)
   read -p "Do you want to log in now? (y/N) " should_login
   echo
   if [[ $should_login =~ [Yy]$ ]]; then
-    $cli_name ssh
-  fi
-
-  exit
-fi
-
-# Install dependencies
-if [[ "$command" = "install" ]]; then
-  # build Citadel Docker image
-  docker build -t citadel $script_dir/..
-
-  # install Docker
-  echo 'Installing Docker...'
-  if command -v "docker" >/dev/null 2>&1; then
-    echo 'Docker is already installed. Skipping...'
-  else
-    sudo $script_dir/../scripts/install-docker.sh
-  fi
-
-  # install Sysbox
-  echo 'Installing Sysbox...'
-  if command -v "sysbox" >/dev/null 2>&1; then
-    echo 'Sysbox is already installed. Skipping...'
-  else
-    sudo $script_dir/../scripts/install-sysbox.sh
+    $CLI_NAME ssh
   fi
 
   exit
@@ -322,272 +101,25 @@ fi
 
 # Show the container IP
 if [[ "$command" = "info" ]]; then
-  check_citadel_environment
+  check_dependencies
+  check_container
 
-  cat <<EOF
-Citadel Dashboard is accessible at the following URLs:
+  show_welcome $(get_node_network) $(get_container_hostname) $(get_container_ip)
 
-  - http://$(get_container_hostname).local
-  - http://$(get_container_ip)
-
-EOF
-  exit
-fi
-
-# Start the container
-if [[ "$command" = "start" ]]; then
-  check_citadel_environment
-  if [ "$(docker inspect -f '{{.State.Running}}' citadel)" == "true" ]; then
-    echo "Citadel is already running"
-    exit 1
-  else
-    printf "Starting Citadel...\n\n"
-    docker start citadel &>/dev/null
-  fi
-  exit
-fi
-
-# Stop the container
-if [[ "$command" = "stop" ]]; then
-  check_citadel_environment
-  echo "Shutting down Citadel..."
-  docker stop citadel &>/dev/null
-  exit
-fi
-
-# Destroy the container
-if [[ "$command" = "destroy" ]]; then
-  check_citadel_environment
-  echo "Warning: This will completely remove the container meaning it needs to be recreated on next boot."
-  echo "If you just want to stop the container run: $cli_name stop"
-  read -p "Are you sure? (y/N) "
-  echo
-  if [[ $REPLY =~ [Yy]$ ]]; then
-    echo "Removing container..."
-    docker rm -f citadel &>/dev/null
-    echo "Citadel container destroyed"
-  else
-    echo "Cancelled."
-  fi
-  exit
-fi
-
-# List container services
-if [[ "$command" = "containers" ]]; then
-  check_citadel_environment
-  run_in_container "docker compose config --services"
-  exit
-fi
-
-# Rebuild a container service
-# TODO
-if [[ "$command" = "rebuild" ]]; then
-  check_citadel_environment
-  if [ -z ${2+x} ]; then
-    echo "A second argument is required!"
-    exit 1
-  fi
-  container="$2"
-  run_in_container "                           \
-       docker compose build $container  \
-    && docker compose stop $container   \
-    && docker compose rm -f $container  \
-    && DEVICE_HOSTS=http://citadel.local docker compose up -d $container"
-  exit
-fi
-
-# Reload all Citadel containers
-if [[ "$command" = "reload" ]]; then
-  check_citadel_environment
-  echo "Reloading the Citadel service..."
-  echo
-  run_in_container "                  \
-       sudo scripts/stop       \
-    && sudo scripts/configure  \
-    && sudo scripts/start"
-  exit
-fi
-
-# Backup the container
-if [[ "$command" = "backup" ]]; then
-  check_citadel_environment
-
-  current_date=$(date '+%Y-%m-%d')
-
-  echo "Stopping Citadel services..."
-  run_in_container "scripts/stop" &>/dev/null || {
-    echo "No container found."
-    exit
-  }
-  echo "Creating snapshot..."
-  docker commit citadel citadel-backup:${current_date}
-  echo "Backing up..."
-  docker save citadel-backup:${current_date} | gzip >citadel-backup-${current_date}.tar.gz
-  echo "Cleaning up..."
-  docker rmi citadel-backup:${current_date} &>/dev/null
-  echo "Done! Backup saved to ./citadel-backup-${current_date}.tar.gz"
-  exit
-fi
-
-# Restore a backup
-if [[ "$command" = "restore" ]]; then
-  check_citadel_environment
-
-  backup_date=${2:17:10}
-
-  # check for current container
-  docker inspect citadel &>/dev/null || {
-    # load & rename
-    echo "Restoring from backup $2..."
-    docker load <$2
-    docker tag citadel-backup:${backup_date} citadel
-    echo "Cleaning up..."
-    docker rmi citadel-backup:${backup_date} &>/dev/null
-    read -p "Backup restored successfully. Do you want to boot it now? (y/N) " should_boot
-    echo
-    if [[ $should_boot =~ [Yy]$ ]]; then
-      $cli_name boot
-      exit
-    else
-      echo "All done."
-      exit
-    fi
-    exit
-  }
-
-  read -p "Found existing Citadel installation. Do you want to overwrite it? (y/N) " should_overwrite
-  echo
-  if [[ $should_overwrite =~ [Yy]$ ]]; then
-    echo "Destroying current Citadel..."
-    docker rm citadel &>/dev/null || {
-      echo 'Citadel is still running. Stop it and try again.'
-      exit
-    }
-    docker rmi citadel &>/dev/null
-    echo "Citadel image destroyed."
-    $cli_name restore $2
-    exit
-  else
-    echo "Cancelled"
-    exit
-  fi
-fi
-
-# Rebuild a container service
-if [[ "$command" = "app" ]]; then
-  check_citadel_environment
-  if [ -z ${2+x} ]; then
-    args=""
-  else
-    args="${@:2}"
-  fi
-  run_in_container "scripts/app ${args}"
-  exit
-fi
-
-# Stream Citadel logs
-if [[ "$command" = "logs" ]]; then
-  shift
-  args="$@"
-  check_citadel_environment
-  while true; do
-    run_in_container "docker compose logs -f $args" || {
-      echo "$(date +"%T") Trying again in 1 second..."
-    }
-    sleep 1
-  done
-  exit
-fi
-
-# Run a command inside the container
-if [[ "$command" = "run" ]]; then
-  check_citadel_environment
-  if [ -z ${2+x} ]; then
-    echo "A second argument is required!"
-    exit 1
-  fi
-  run_in_container "$2"
-  exit
-fi
-
-# Run bitcoin-cli with arguments
-if [[ "$command" = "bitcoin-cli" ]]; then
-  check_citadel_environment
-  if [ -z ${2+x} ]; then
-    args=""
-  else
-    args="${@:2}"
-  fi
-  run_in_container "docker exec -t bitcoin bitcoin-cli ${args}"
-  exit
-fi
-
-# Run lncli with arguments
-if [[ "$command" = "lncli" ]]; then
-  check_citadel_environment
-  if [ -z ${2+x} ]; then
-    args=""
-  else
-    args="${@:2}"
-  fi
-  run_in_container "docker exec -t lightning lncli ${args}"
-  exit
-fi
-
-# Fund the wallet
-if [[ "$command" = "fund" ]]; then
-  check_citadel_environment
-  check_node_network
-
-  # default to 1 BTC
-  amount=${2:-1}
-
-  # Check for existing wallet
-  $cli_name bitcoin-cli unloadwallet "mywallet" &>/dev/null || true
-  $cli_name bitcoin-cli loadwallet "mywallet" &>/dev/null || {
-    # Create a wallet if it doesn't exist
-    $cli_name bitcoin-cli createwallet "mywallet"
-  }
-
-  # Generate some blocks to get funds
-  $cli_name bitcoin-cli -generate 101
-
-  # Generate a new address with LND
-  address=$($cli_name lncli --network regtest newaddress p2wkh | jq -r '.address')
-
-  # Send some funds to the new address
-  $cli_name bitcoin-cli -named sendtoaddress address=$address amount=$amount fee_rate=1 replaceable=true
-
-  # Mine some blocks to confirm the transaction
-  $cli_name bitcoin-cli -generate 6
-
-  printf "\nAddress $address successfully funded with $amount BTC.\n"
-  exit
-fi
-
-# Generate a block continuously
-if [[ "$command" = "auto-mine" ]]; then
-  check_citadel_environment
-  check_node_network
-
-  if [ -z ${2+x} ]; then
-    echo "Missing argument: Specify an interval in seconds"
-    exit 1
-  fi
-  echo "Generating a block every $2 seconds. Press [CTRL+C] to stop..."
-  run_in_container "while true; do docker exec -t bitcoin bitcoin-cli -generate 1; sleep $2; done"
+  printf "\nLogin with \"${CLI_NAME} ssh\" or run a command directly with \"${CLI_NAME} run\"\n\n"
   exit
 fi
 
 # Get an SSH session inside the container
 if [[ "$command" = "ssh" ]]; then
-  check_citadel_environment
+  check_dependencies
+  check_container
 
   # get host IPs
   addresses=($(ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p'))
 
   # get container port
-  port=$(docker inspect citadel | jq '.[0].NetworkSettings.Ports."22/tcp"[0].HostPort | tonumber')
+  port=$(docker container inspect --format='{{(index (index .NetworkSettings.Ports "22/tcp") 0).HostPort}}' $CONTAINER_NAME)
 
   if [ -z ${2+x} ]; then
     ssh citadel@${addresses[0]} -p $port
@@ -606,7 +138,7 @@ if [[ "$command" = "ssh" ]]; then
         ;;
       help | *)
         cat <<EOF
-Usage: ${cli_name} ssh <command>
+Usage: ${CLI_NAME} ssh <command>
 
 Commands:
     help              Show this help message
@@ -621,7 +153,301 @@ EOF
   exit
 fi
 
+# Start the container
+if [[ "$command" = "start" ]]; then
+  check_dependencies
+  check_container
+
+  if [ "$(docker container inspect -f '{{.State.Running}}' $CONTAINER_NAME)" == "true" ]; then
+    echo "Citadel is already running"
+    exit 1
+  else
+    printf "Starting Citadel...\n\n"
+    docker start $CONTAINER_NAME &>/dev/null
+  fi
+  exit
+fi
+
+# Stop the container
+if [[ "$command" = "stop" ]]; then
+  check_dependencies
+  check_container
+
+  echo "Shutting down Citadel..."
+  docker stop $CONTAINER_NAME &>/dev/null
+  exit
+fi
+
+# Reload the Citadel service
+if [[ "$command" = "reload" ]]; then
+  check_dependencies
+  check_container
+
+  printf "Reloading the Citadel service...\n\n"
+  run_in_container "scripts/stop && scripts/configure && scripts/start"
+  exit
+fi
+
+# Destroy the container
+if [[ "$command" = "destroy" ]]; then
+  check_dependencies
+  check_container
+
+  echo "WARNING: This will completely remove the container and its data."
+  echo "If you just want to stop the container run \"$CLI_NAME stop\""
+  read -p "Are you sure? (y/N) "
+  echo
+  if [[ $REPLY =~ [Yy]$ ]]; then
+    echo "Destroying container..."
+    docker rm -f $CONTAINER_NAME &>/dev/null
+    echo "Citadel container destroyed"
+  else
+    echo "Cancelled."
+  fi
+  exit
+fi
+
+# List container services
+if [[ "$command" = "containers" ]]; then
+  check_dependencies
+  check_container
+
+  run_in_container "docker compose config --services"
+  exit
+fi
+
+# Rebuild a container service
+if [[ "$command" = "rebuild" ]]; then
+  check_dependencies
+  check_container
+
+  if [ -z ${2+x} ]; then
+    echo "A second argument is required!"
+    exit 1
+  fi
+
+  container="$2"
+  run_in_container "                    \
+       docker compose build $container  \
+    && docker compose stop $container   \
+    && docker compose rm -f $container  \
+    && DEVICE_HOSTS=$(get_container_hostname) docker compose up -d $container"
+  exit
+fi
+
+# Backup the container
+if [[ "$command" = "backup" ]]; then
+  check_dependencies
+  check_container
+
+  current_date=$(date '+%Y-%m-%d')
+
+  echo "Stopping Citadel services..."
+  run_in_container "scripts/stop" &>/dev/null
+  echo "Creating snapshot..."
+  docker commit $CONTAINER_NAME citadel-backup:${current_date}
+  echo "Backing up..."
+  docker save citadel-backup:${current_date} | gzip >citadel-backup-${current_date}.tar.gz
+  echo "Cleaning up..."
+  docker rmi citadel-backup:${current_date} &>/dev/null
+  echo "Done! Backup saved to ./citadel-backup-${current_date}.tar.gz"
+  exit
+fi
+
+# Restore a backup
+if [[ "$command" = "restore" ]]; then
+  check_dependencies
+
+  if [ -z ${2+x} ]; then
+    echo "A second argument is required!"
+    exit 1
+  fi
+
+  # TODO: we aren't really using the date here atm
+  backup_date=${2:15:10}
+
+  # check for current container
+  docker container inspect $CONTAINER_NAME &>/dev/null || {
+    # load & rename
+    echo "Restoring from backup $2..."
+    docker load <$2
+    docker tag citadel-backup:${backup_date} $IMAGE_NAME
+    echo "Cleaning up..."
+    docker rmi citadel-backup:${backup_date} &>/dev/null
+    read -p "Backup restored successfully. Do you want to boot it now? (y/N) " should_boot
+    echo
+    if [[ $should_boot =~ [Yy]$ ]]; then
+      $CLI_NAME boot
+      exit
+    else
+      echo "All done."
+      exit
+    fi
+    exit
+  }
+
+  read -p "Found existing Citadel installation. Do you want to overwrite it? (y/N) " should_overwrite
+  echo
+  if [[ $should_overwrite =~ [Yy]$ ]]; then
+    echo "Destroying current Citadel..."
+    docker rm $CONTAINER_NAME &>/dev/null || {
+      echo 'Citadel is still running. Stop it and try again.'
+      exit
+    }
+    docker rmi citadel &>/dev/null
+    echo "Citadel image destroyed."
+    $CLI_NAME restore $2
+  else
+    echo "Cancelled"
+  fi
+  exit
+fi
+
+# Rebuild a container service
+if [[ "$command" = "app" ]]; then
+  check_dependencies
+  check_container
+
+  if [ -z ${2+x} ]; then
+    echo "A second argument is required!"
+    exit 1
+  else
+    args="${@:2}"
+  fi
+
+  run_in_container "scripts/app ${args}"
+  exit
+fi
+
+# Stream Citadel logs
+if [[ "$command" = "logs" ]]; then
+  check_dependencies
+  check_container
+
+  shift
+  args="$@"
+
+  while true; do
+    run_in_container "docker compose logs -f $args" || {
+      echo "$(date +"%T") Trying again in 1 second..."
+    }
+    sleep 1
+  done
+  exit
+fi
+
+# Run a command inside the container
+if [[ "$command" = "run" ]]; then
+  check_dependencies
+  check_container
+
+  if [ -z ${2+x} ]; then
+    echo "A second argument is required!"
+    exit 1
+  fi
+
+  run_in_container "$2"
+  exit
+fi
+
+# Run bitcoin-cli with arguments
+if [[ "$command" = "bitcoin-cli" ]]; then
+  check_dependencies
+  check_container
+
+  if [ -z ${2+x} ]; then
+    args=""
+  else
+    args="${@:2}"
+  fi
+  run_in_container "docker exec -t bitcoin bitcoin-cli ${args}"
+  exit
+fi
+
+# Run lncli with arguments
+if [[ "$command" = "lncli" ]]; then
+  check_dependencies
+  check_container
+
+  if [ -z ${2+x} ]; then
+    args=""
+  else
+    args="${@:2}"
+  fi
+  run_in_container "docker exec -t lightning lncli ${args}"
+  exit
+fi
+
+# Fund the wallet
+if [[ "$command" = "fund" ]]; then
+  check_dependencies
+  check_container
+  check_node_network
+
+  # default to 1 BTC
+  amount=${2:-1}
+  wallet_name="mywallet"
+
+  # Check if LND wallet exists
+  lnd_wallet_state=$($CLI_NAME lncli --network regtest state | jq -r '.state')
+
+  if [[ $lnd_wallet_state == "NON_EXISTING" ]]; then
+    echo "No LND Wallet found. Create a user first."
+    exit 1
+  fi
+
+  # Check Bitcoin Core wallet exists
+  $CLI_NAME bitcoin-cli unloadwallet $wallet_name &>/dev/null || true
+  $CLI_NAME bitcoin-cli loadwallet $wallet_name &>/dev/null || {
+    # Create a wallet if it doesn't exist
+    $CLI_NAME bitcoin-cli createwallet $wallet_name
+  }
+
+  # Generate some blocks to get funds
+  $CLI_NAME bitcoin-cli -generate 101
+
+  # Generate a new address with LND
+  address=$($CLI_NAME lncli --network regtest newaddress p2wkh | jq -r '.address')
+
+  # Send some funds to the new address
+  $CLI_NAME bitcoin-cli -named sendtoaddress address=$address amount=$amount fee_rate=1 replaceable=true
+
+  # Mine some blocks to confirm the transaction
+  $CLI_NAME bitcoin-cli -generate 6
+
+  printf "\nAddress $address successfully funded with $amount BTC.\n"
+  exit
+fi
+
+# Generate a block continuously
+if [[ "$command" = "auto-mine" ]]; then
+  check_dependencies
+  check_container
+  check_node_network
+
+  # default to 5 seconds
+  interval=${2:-5}
+  wallet_name="mywallet"
+
+  # Check Bitcoin Core wallet exists
+  $CLI_NAME bitcoin-cli unloadwallet $wallet_name &>/dev/null || true
+  $CLI_NAME bitcoin-cli loadwallet $wallet_name &>/dev/null || {
+    # Create a wallet if it doesn't exist
+    $CLI_NAME bitcoin-cli createwallet $wallet_name &>/dev/null
+    echo "Created new Bitcoin Core wallet $wallet_name"
+  }
+
+  printf "Generating a block every $interval seconds. Press [CTRL+C] to stop...\n\n"
+
+  while true; do
+    $CLI_NAME bitcoin-cli -generate 1
+    sleep $interval
+  done
+
+  exit
+fi
+
 # If we get here it means no valid command was supplied
 # Show help and exit
 show_help
-exit 1
+exit

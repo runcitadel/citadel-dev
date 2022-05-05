@@ -1,6 +1,6 @@
 # Citadel (Docker-in-Docker)
 
-Automatically initialize and manage a Citadel development environment.
+Automatically initialize and manage a Citadel.
 
 This installation method uses nested Docker containers for a lightweight and fast way to get up and running with Citadel.
 Sysbox enables us to do this in a way that is **easy and secure**. The inner Docker is **totally isolated** from the Docker on the host.
@@ -9,46 +9,52 @@ Sysbox enables us to do this in a way that is **easy and secure**. The inner Doc
 
 ### Requirements
 
-- 4GB RAM and 600GB disk space (for mainnet)
 - [Docker](https://docs.docker.com/get-docker/)
 - [Sysbox](https://github.com/nestybox/sysbox/blob/master/docs/user-guide/install-package.md)
+- 4GB RAM and 600GB disk space (for mainnet)
 
-### Clone this repository
+### Install & Update Script
 
 ```
-$ git clone -b docker-in-docker --depth=1 https://github.com/runcitadel/citadel-dev.git ~/.citadel-dev
+$ mkdir -p ~/.citadel-dev && curl -#L https://github.com/runcitadel/citadel-dev/tarball/docker-in-docker | tar -xzv --strip-components 1 --exclude={README.md,LICENSES,LICENSE,.gitignore} -C ~/.citadel-dev
 ```
 
-### Update shell profile
+Running the above command downloads the repository to ~/.citadel-dev. To update later on, just run that command again.
+
+### Add to $PATH
+
+Make the command available in your shell
 
 ```
 $ export PATH="$PATH:$HOME/.citadel-dev/bin"
 ```
 
-### Install required dependencies
+If you want to have it permanently, also add the line to the correct profile file (~/.bash_profile, ~/.zshrc, ~/.profile, or ~/.bashrc).
+
+### Install Dependencies
+
+Install the required dependencies if you haven't already
 
 ```
 $ citadel-dev install
 ```
 
-### Start a Citadel container
+## Usage
+
+Start Citadel and login in with the default credentials (user: _citadel_, password: _freedom_)
 
 ```
 $ citadel-dev boot
 ```
 
-Login in with the default Citadel credentials (user: _citadel_, password: _freedom_)
-
-## Usage
-
-To see all possible commands:
+List all possible commands
 
 ```
-$ citadel-dev help
+$ citadel-dev
 ```
 
 ## License
 
-All code committed on and before git commit 874d4d801f1bb04ded5155e303be31fe20a17e63 is licensed via MIT and © Umbrel
+All code committed on and before git commit `874d4d8` is licensed via MIT and © Umbrel
 
-All code committed after git commit 874d4d801f1bb04ded5155e303be31fe20a17e63 is licensed GPL v3
+All code committed after git commit `874d4d8` is licensed GPL v3
