@@ -26,6 +26,10 @@ if [[ "$command" = "install" ]]; then
     sudo $SCRIPT_DIR/../scripts/install-docker.sh
   fi
 
+  # build Citadel Docker image
+  echo 'Building Docker image...'
+  docker build -t $IMAGE_NAME $SCRIPT_DIR/..
+
   # install Sysbox
   echo 'Installing Sysbox...'
   if command -v "sysbox" >/dev/null 2>&1; then
@@ -33,10 +37,6 @@ if [[ "$command" = "install" ]]; then
   else
     sudo $SCRIPT_DIR/../scripts/install-sysbox.sh
   fi
-
-  # build Citadel Docker image
-  echo 'Building Docker image...'
-  docker build -t $IMAGE_NAME $SCRIPT_DIR/..
 
   echo 'Citadel dependencies installed successfully.'
   exit
