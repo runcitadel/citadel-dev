@@ -50,7 +50,13 @@ citadel-dev boot
 List all possible commands
 
 ```
-citadel-dev
+citadel-dev help
+```
+
+## Development
+
+```
+citadel-dev dev
 ```
 
 ## License

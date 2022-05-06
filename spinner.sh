@@ -35,11 +35,8 @@ function _spinner() {
 
     case $1 in
     start)
-        # calculate the column where spinner and status msg will be displayed
-        let column=$(tput cols)-${#2}-8
-        # display message and position the cursor in $column column
-        echo -ne ${2}
-        printf "%${column}s"
+        # display message with some space
+        echo -ne "${2}   "
 
         # start spinner
         i=1
@@ -59,7 +56,7 @@ function _spinner() {
 
         kill $3 >/dev/null 2>&1
 
-        # inform the user uppon success or failure
+        # inform the user upon success or failure
         echo -en "\b["
         if [[ $2 -eq 0 ]]; then
             echo -en "${green}${on_success}${nc}"

@@ -7,6 +7,7 @@ RUN apt-get update &&                            \
     apt-get install -y --no-install-recommends   \
             systemd                              \
             systemd-sysv                         \
+            libpam-systemd                       \
             libsystemd0                          \
             ca-certificates                      \
             dbus                                 \

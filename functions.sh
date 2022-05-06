@@ -12,8 +12,8 @@ Usage: ${CLI_NAME} <command> [options]
 Commands:
     help                               Show this help message
     install                            Builds the image and installs Docker + Sysbox
-    boot [options]                     Start the container
-    info                               Show the container IP
+    dev [options]                      Initialize a development environment
+    boot [options]                     Run a new container
     start                              Start the container
     stop                               Stop the container
     reload                             Reloads the Citadel service
@@ -25,11 +25,11 @@ Commands:
     containers                         List container services
     rebuild <container>                Rebuild a container service
     app <command> [options]            Manages apps installations
-    logs                               Stream Citadel logs
     bitcoin-cli <command>              Run bitcoin-cli with arguments
     lncli <command>                    Run lncli with arguments
-    fund <amount>                      Fund the onchain wallet
-    auto-mine <seconds>                Generate a block continuously
+    fund <amount>                      Fund the onchain wallet (regtest mode only)
+    auto-mine <seconds>                Generate a block continuously (regtest mode only)
+    logs                               Stream Citadel logs
 EOF
 }
 
@@ -72,7 +72,28 @@ show_welcome() {
 
 --------------------------------------------------------------------------------
 
-Citadel started with Bitcoin network set to ${1}.
+EOF
+
+  if ${4}; then
+    cat <<EOF
+Citadel started in development mode with Bitcoin network set to ${1}.
+
+Yarn is installing dependencies and spinning up development servers.
+Run "citadel-dev logs dashboard manager middleware" to see progress.
+
+URLs:
+
+ - dashboard (current)  http://${2}.local
+                        http://${3}
+
+ - dashboard (new)      http://${2}.local:8000
+                        http://${3}:8000
+
+--------------------------------------------------------------------------------
+EOF
+  else
+    cat <<EOF
+Citadel is running with Bitcoin network set to ${1}.
 
 Dashboard is listening at:
 
@@ -81,6 +102,7 @@ Dashboard is listening at:
 
 --------------------------------------------------------------------------------
 EOF
+  fi
 }
 
 # Get script location and correctly handle any symlinks
@@ -112,6 +134,14 @@ check_dependencies() {
       exit 1
     fi
   done
+}
+
+check_dev_environment() {
+  if [ -f "$PWD/.citadel-dev" ]; then
+    echo true
+  else
+    echo false
+  fi
 }
 
 get_container_ip() {

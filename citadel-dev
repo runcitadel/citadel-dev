@@ -42,19 +42,102 @@ if [[ "$command" = "install" ]]; then
   exit
 fi
 
+# Initialize a development environment
+if [[ "$command" = "dev" ]]; then
+  shift
+
+  directory=.
+  ssh=false
+
+  # parse arguments
+  for arg in "$@"; do
+    case "$1" in
+    -d | --directory)
+      directory=$2
+      shift 1
+      ;;
+    --ssh)
+      ssh=true
+      shift 1
+      ;;
+    *)
+      shift 1
+      ;;
+    esac
+  done
+
+  # create target directory
+  mkdir -p $directory
+
+  if [[ "$(ls -A $directory)" ]]; then
+    echo "Working directory must be empty! You can pass a target directory by using the --directory argument."
+    exit 1
+  fi
+
+  printf "\nCloning container repositories..."
+
+  repos="
+    runcitadel/core
+    runcitadel/manager
+    runcitadel/middleware
+    runcitadel/dashboard
+    runcitadel/ui
+    runcitadel/sdk
+    runcitadel/fs
+    runcitadel/utils
+    runcitadel/node-lndconnect
+    runcitadel/bitcoin-rpc"
+
+  for repo in $repos; do
+    echo
+
+    array=(${repo//// })
+    user=${array[0]}
+    repo=${array[1]}
+
+    if $ssh; then
+      url="git@github.com:$user/$repo.git"
+    else
+      url="https://github.com/$user/$repo.git"
+    fi
+
+    if [[ $repo == "core" ]]; then
+      git clone "$url" "$directory"
+      printf "\nCopying Docker Compose overrides..."
+      cp "$(get_script_location)/docker-compose.override.yml" "$directory/"
+    else
+      git clone "$url" "$directory/$repo"
+    fi
+  done
+
+  touch "$directory/.citadel-dev"
+
+  printf "\nYour development environment is now setup.\n"
+  printf "You can boot your system container with:\n\n"
+  printf "cd $directory && $CLI_NAME boot\n"
+  exit
+fi
+
 # Boot the container
 if [[ "$command" = "boot" ]]; then
   check_dependencies
 
   shift
 
+  development=$(check_dev_environment)
+
   # default values
-  network="regtest"
-  hostname="citadel-dev"
+  $development && network="regtest" || network="mainnet"
+  $development && hostname="citadel-dev" || hostname="citadel"
+  $development && verbose=true || verbose=false
 
   # parse arguments
   for arg in "$@"; do
     case "$arg" in
+    -h | --hostname)
+      hostname=$2
+      shift 1
+      ;;
     -n | --network)
       case $2 in
       "mainnet" | "testnet" | "signet" | "regtest")
@@ -67,46 +150,56 @@ if [[ "$command" = "boot" ]]; then
         ;;
       esac
       ;;
+    -v | --verbose)
+      verbose=true
+      shift 1
+      ;;
     *)
       shift 1
       ;;
     esac
   done
 
-  echo "Booting..."
+  if $development; then
+    echo "Found Citadel Development environment. Booting in dev mode..."
+    docker run --detach --publish-all \
+      --runtime sysbox-runc \
+      --env NETWORK=$network \
+      --name $CONTAINER_NAME \
+      --hostname $hostname \
+      --mount type=bind,source="$(pwd)",target=/home/citadel/citadel \
+      $IMAGE_NAME &>/dev/null
+  else
+    echo "Booting..."
+    docker run --runtime sysbox-runc --env NETWORK=$network --detach --publish-all --name $CONTAINER_NAME --hostname $hostname $IMAGE_NAME &>/dev/null || {
+      read -p "The container exists already. Do you want to start it? (y/N) " should_start
+      echo
+      if [[ $should_start =~ [Yy]$ ]]; then
+        $CLI_NAME start
+      else
+        exit 1
+      fi
+    }
+  fi
 
-  docker run --runtime sysbox-runc --env NETWORK=$network -d -P --name $CONTAINER_NAME --hostname $hostname $IMAGE_NAME &>/dev/null || {
-    read -p "The container exists already. Do you want to start it? (y/N) " should_start
-    echo
-    if [[ $should_start =~ [Yy]$ ]]; then
-      $CLI_NAME start
-    else
-      exit 1
-    fi
-  }
+  if $verbose; then
+    # wait for container
+    sleep 1
+    # Log until Citadel is up
+    run_in_container "journalctl -f -u citadel-startup | sed '/Citadel is now accessible at/ q'"
+  else
+    start_spinner "Citadel is spinning up containers... This will only take a minute."
+    wait_for_dashboard
+    stop_spinner $?
+  fi
 
-  start_spinner "Citadel is spinning up containers... This will only take a minute."
-  wait_for_dashboard
-  stop_spinner $?
-
-  show_welcome $network $hostname $(get_container_ip)
+  show_welcome $network $hostname $(get_container_ip) $development
   read -p "Do you want to log in now? (y/N) " should_login
   echo
   if [[ $should_login =~ [Yy]$ ]]; then
     $CLI_NAME ssh
   fi
 
-  exit
-fi
-
-# Show the container IP
-if [[ "$command" = "info" ]]; then
-  check_dependencies
-  check_container
-
-  show_welcome $(get_node_network) $(get_container_hostname) $(get_container_ip)
-
-  printf "\nLogin with \"${CLI_NAME} ssh\" or run a command directly with \"${CLI_NAME} run\"\n\n"
   exit
 fi
 
@@ -122,7 +215,7 @@ if [[ "$command" = "ssh" ]]; then
   port=$(docker container inspect --format='{{(index (index .NetworkSettings.Ports "22/tcp") 0).HostPort}}' $CONTAINER_NAME)
 
   if [ -z ${2+x} ]; then
-    ssh citadel@${addresses[0]} -p $port
+    ssh -t citadel@${addresses[0]} -p $port 'cd /home/citadel/citadel && exec bash -l'
   else
     shift
 
