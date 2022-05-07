@@ -213,6 +213,15 @@ if [[ "$command" = "boot" ]]; then
   exit
 fi
 
+# List all containers
+if [[ "$command" = "list" ]]; then
+  check_dependencies
+
+  docker ps --filter "name=citadel"
+  # $(docker ps --filter "name=citadel")
+  exit
+fi
+
 # Get an SSH session inside the container
 if [[ "$command" = "ssh" ]]; then
   check_dependencies
