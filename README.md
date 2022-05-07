@@ -16,17 +16,17 @@ Sysbox enables us to do this in a way that is **easy and secure**. The inner Doc
 ### Install & Update Script
 
 ```
-mkdir -p ~/.citadel-dev && curl -#L https://github.com/runcitadel/citadel-dev/tarball/docker-in-docker | tar -xzv --strip-components 1 --exclude={README.md,LICENSES,LICENSE,.gitignore} -C ~/.citadel-dev
+mkdir -p ~/.citadel && curl -#L https://github.com/runcitadel/citadel-dev/tarball/docker-in-docker | tar -xzv --strip-components 1 --exclude={README.md,LICENSES,LICENSE,.gitignore} -C ~/.citadel
 ```
 
-Running the above command downloads the repository to ~/.citadel-dev. To update later on, just run that command again.
+Running the above command downloads the repository to ~/.citadel. To update later on, just run that command again.
 
 ### Add to $PATH
 
 Make the command available in your shell
 
 ```
-export PATH="$PATH:$HOME/.citadel-dev/bin"
+export PATH="$PATH:$HOME/.citadel/bin"
 ```
 
 If you want to have it permanently, also add the line to the correct profile file (~/.bash_profile, ~/.zshrc, ~/.profile, or ~/.bashrc).
@@ -36,7 +36,7 @@ If you want to have it permanently, also add the line to the correct profile fil
 Install the required dependencies if you haven't already
 
 ```
-citadel-dev install
+citadel install
 ```
 
 ## Usage
@@ -44,19 +44,19 @@ citadel-dev install
 Start Citadel and login in with the default credentials (user: _citadel_, password: _freedom_)
 
 ```
-citadel-dev boot
+citadel boot
 ```
 
 List all possible commands
 
 ```
-citadel-dev help
+citadel help
 ```
 
 ## Development
 
 ```
-citadel-dev dev
+citadel dev <my-dev-machine>
 ```
 
 ## License
