@@ -46,16 +46,18 @@ fi
 if [[ "$command" = "dev" ]]; then
   shift
 
-  directory=.
+  if [ -z ${1+x} ]; then
+    printf "Missing target directory.\n"
+    echo "Usage: \"$CLI_NAME dev <directory>\""
+    exit 1
+  fi
+
+  directory=$1
   ssh=false
 
   # parse arguments
   for arg in "$@"; do
     case "$1" in
-    -d | --directory)
-      directory=$2
-      shift 1
-      ;;
     --ssh)
       ssh=true
       shift 1
@@ -70,7 +72,7 @@ if [[ "$command" = "dev" ]]; then
   mkdir -p $directory
 
   if [[ "$(ls -A $directory)" ]]; then
-    echo "Working directory must be empty! You can pass a target directory by using the --directory argument."
+    echo "Target directory must be empty!"
     exit 1
   fi
 
@@ -101,12 +103,11 @@ if [[ "$command" = "dev" ]]; then
       url="https://github.com/$user/$repo.git"
     fi
 
+    git clone "$url" "$directory/$repo"
+
     if [[ $repo == "core" ]]; then
-      git clone "$url" "$directory"
       printf "\nCopying Docker Compose overrides..."
-      cp "$(get_script_location)/docker-compose.override.yml" "$directory/"
-    else
-      git clone "$url" "$directory/$repo"
+      cp "$(get_script_location)/docker-compose.override.yml" "$directory/$repo"
     fi
   done
 
@@ -161,14 +162,23 @@ if [[ "$command" = "boot" ]]; then
   done
 
   if $development; then
-    echo "Found Citadel Development environment. Booting in dev mode..."
+    echo "Found Citadel Development environment. Booting in development mode..."
     docker run --detach --publish-all \
       --runtime sysbox-runc \
       --env NETWORK=$network \
       --name $CONTAINER_NAME \
       --hostname $hostname \
-      --mount type=bind,source="$(pwd)",target=/home/citadel/citadel \
-      $IMAGE_NAME &>/dev/null
+      --mount type=bind,source="$(pwd)/core",target=/home/citadel/citadel \
+      --mount type=bind,source="$(pwd)/manager",target=/home/citadel/manager \
+      --mount type=bind,source="$(pwd)/middleware",target=/home/citadel/middleware \
+      --mount type=bind,source="$(pwd)/dashboard",target=/home/citadel/dashboard \
+      --mount type=bind,source="$(pwd)/ui",target=/home/citadel/ui \
+      --mount type=bind,source="$(pwd)/sdk",target=/home/citadel/sdk \
+      --mount type=bind,source="$(pwd)/fs",target=/home/citadel/fs \
+      --mount type=bind,source="$(pwd)/utils",target=/home/citadel/utils \
+      --mount type=bind,source="$(pwd)/node-lndconnect",target=/home/citadel/node-lndconnect \
+      --mount type=bind,source="$(pwd)/bitcoin-rpc",target=/home/citadel/bitcoin-rpc \
+      $IMAGE_NAME
   else
     echo "Booting..."
     docker run --runtime sysbox-runc --env NETWORK=$network --detach --publish-all --name $CONTAINER_NAME --hostname $hostname $IMAGE_NAME &>/dev/null || {
@@ -257,6 +267,12 @@ if [[ "$command" = "start" ]]; then
   else
     printf "Starting Citadel...\n\n"
     docker start $CONTAINER_NAME &>/dev/null
+    printf "Citadel started.\n\n"
+    read -p "Do you want to log in now? (y/N) " should_login
+    echo
+    if [[ $should_login =~ [Yy]$ ]]; then
+      $CLI_NAME ssh
+    fi
   fi
   exit
 fi
@@ -476,6 +492,8 @@ if [[ "$command" = "fund" ]]; then
   check_dependencies
   check_container
   check_node_network
+  check_inner_container "lightning"
+  check_inner_container "bitcoin"
 
   # default to 1 BTC
   amount=${2:-1}
@@ -517,6 +535,7 @@ if [[ "$command" = "auto-mine" ]]; then
   check_dependencies
   check_container
   check_node_network
+  check_inner_container "bitcoin"
 
   # default to 5 seconds
   interval=${2:-5}

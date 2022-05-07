@@ -79,7 +79,7 @@ EOF
 Citadel started in development mode with Bitcoin network set to ${1}.
 
 Yarn is installing dependencies and spinning up development servers.
-Run "citadel-dev logs dashboard manager middleware" to see progress.
+Run "${CLI_NAME} logs dashboard manager middleware" to see progress.
 
 URLs:
 
@@ -193,4 +193,14 @@ wait_for_dashboard() {
 
     break
   done
+}
+
+# Check if inner container is running
+check_inner_container() {
+  status=$(run_in_container "docker container inspect -f '{{.State.Status}}' $1")
+
+  if [[ ! $(trim $status) == "running" ]]; then
+    echo "Container \"$1\" is not running."
+    exit 1
+  fi
 }
