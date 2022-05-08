@@ -8,22 +8,22 @@ services:
   dashboard:
     image: runcitadel/dashboard
     build:
-      context: ./dashboard
+      context: ../dashboard
       target: development
     volumes:
-      - ./dashboard:/app
-      - ./sdk:/sdk
+      - ../dashboard:/app
+      - ../sdk:/sdk
     environment:
       DEVICE_HOSTNAME: ${DEVICE_HOSTNAME:-citadel-dev.local}
   ui:
     container_name: ui
     image: runcitadel/ui
     build:
-      context: ./ui
+      context: ../ui
       target: development
     volumes:
-      - ./ui:/app
-      - ./sdk:/sdk
+      - ../ui:/app
+      - ../sdk:/sdk
     env_file:
       - .env
     networks:
@@ -32,14 +32,14 @@ services:
   manager:
     image: runcitadel/manager
     build:
-      context: ./manager
+      context: ../manager
       target: development
     volumes:
-      - ./manager:/app
-      - ./sdk:/sdk
-      - ./fs:/fs
-      - ./utils:/utils
-      - ./node-lndconnect:/node-lndconnect
+      - ../manager:/app
+      - ../sdk:/sdk
+      - ../fs:/fs
+      - ../utils:/utils
+      - ../node-lndconnect:/node-lndconnect
     command:
       sh -c "
       ./install-dependencies.sh &&
@@ -48,13 +48,13 @@ services:
   middleware:
     image: runcitadel/middleware
     build:
-      context: ./middleware
+      context: ../middleware
       target: development
     volumes:
-      - ./middleware:/app
-      - ./fs:/fs
-      - ./utils:/utils
-      - ./bitcoin-rpc:/bitcoin-rpc
+      - ../middleware:/app
+      - ../fs:/fs
+      - ../utils:/utils
+      - ../bitcoin-rpc:/bitcoin-rpc
     command: sh -c "
       ./install-dependencies.sh &&
       ./wait-for-manager.sh $MANAGER_IP &&
