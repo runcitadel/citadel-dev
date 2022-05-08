@@ -59,6 +59,18 @@ citadel help
 citadel dev <my-dev-machine>
 ```
 
+## Troubleshoot
+
+Run `docker info` and make sure you have "overlay2" configured as your storage driver and that docker knows about Sysbox as a runtime.
+
+- Unknown runtime specified sysbox-runc
+
+https://github.com/nestybox/sysbox/blob/master/docs/user-guide/troubleshoot.md#docker-reports-unknown-runtime-error
+
+- Inner containers fail to start / stop
+
+Make sure you have "overlay2" configured as your storage driver, see https://docs.docker.com/storage/storagedriver/overlayfs-driver/
+
 ## License
 
 All code committed on and before git commit `874d4d8` is licensed via MIT and © Umbrel
