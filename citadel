@@ -193,8 +193,9 @@ if [[ "$command" = "boot" ]]; then
   fi
 
   if $verbose; then
+    echo 'Citadel is starting up. Listening for logs...'
     # wait for container
-    sleep 1
+    sleep 5
     # Log until Citadel is up
     run_in_container "journalctl -f -u citadel-startup | sed '/Citadel is now accessible at/ q'"
   else

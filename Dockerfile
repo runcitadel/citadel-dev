@@ -133,9 +133,9 @@ RUN apt-get update &&                                                          \
        /usr/share/local/*
 
 # Start Citadel with systemd
-COPY citadel.service /lib/systemd/system/
-RUN ln -sf /lib/systemd/system/citadel.service                                 \
-    /etc/systemd/system/multi-user.target.wants/citadel.service
+COPY citadel-startup.service /lib/systemd/system/
+RUN ln -sf /lib/systemd/system/citadel-startup.service                                 \
+    /etc/systemd/system/multi-user.target.wants/citadel-startup.service
 
 # Set systemd as entrypoint.
 ENTRYPOINT [ "/sbin/init", "--log-level=err" ]
