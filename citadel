@@ -6,6 +6,7 @@ source $(dirname $0)/../spinner.sh
 source $(dirname $0)/../utils.sh
 
 CLI_NAME="$(basename $0)"
+CLI_VERSION="1.3.0"
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
 IMAGE_NAME=citadel
 CONTAINER_NAME=citadel
@@ -566,6 +567,12 @@ if [[ "$command" = "auto-mine" ]]; then
     sleep $interval
   done
 
+  exit
+fi
+
+# Show version information for this CLI
+if [[ "$command" = "version" ]]; then
+  echo "$CLI_NAME v$CLI_VERSION"
   exit
 fi
 
