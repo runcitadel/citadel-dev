@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-source $(dirname $0)/../functions.sh
-source $(dirname $0)/../spinner.sh
-source $(dirname $0)/../utils.sh
+source $(dirname $0)/../scripts/functions.sh
+source $(dirname $0)/../scripts/spinner.sh
+source $(dirname $0)/../scripts/utils.sh
 
 CLI_NAME="$(basename $0)"
 CLI_VERSION="1.3.0"
@@ -28,6 +28,7 @@ if [[ "$command" = "install" ]]; then
   fi
 
   # build Citadel Docker image
+  # TODO: host the image remotely
   echo 'Building Docker image...'
   docker build -t $IMAGE_NAME $SCRIPT_DIR/..
 

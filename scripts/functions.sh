@@ -3,7 +3,7 @@ set -euo pipefail
 
 show_help() {
   cat <<EOF
-${CLI_NAME} 1.3.0
+${CLI_NAME} ${CLI_VERSION}
 
 Automatically initialize and manage isolated Citadel instances.
 
@@ -30,6 +30,7 @@ Commands:
     fund <amount>                      Fund the onchain wallet (regtest mode only)
     auto-mine <seconds>                Generate a block continuously (regtest mode only)
     logs                               Stream Citadel logs
+    version                            # Show version information for this CLI
 EOF
 }
 
