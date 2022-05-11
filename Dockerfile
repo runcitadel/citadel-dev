@@ -1,4 +1,4 @@
-FROM ubuntu:jammy as systemd
+FROM debian:stable-slim as systemd
 
 #
 # Systemd installation
@@ -9,11 +9,14 @@ RUN apt-get update &&                            \
             systemd-sysv                         \
             libpam-systemd                       \
             libsystemd0                          \
+            parted                               \
             ca-certificates                      \
             dbus                                 \
             iptables                             \
             iproute2                             \
             avahi-daemon                         \
+            avahi-discover                       \
+            libnss-mdns                          \
             kmod                                 \
             locales                              \
             sudo                                 \
@@ -46,16 +49,17 @@ RUN apt-get update && apt-get install --no-install-recommends -y      \
        apt-transport-https                                            \
        ca-certificates                                                \
        curl                                                           \
+       gnupg                                                          \
        gnupg-agent                                                    \
        software-properties-common &&                                  \
                                                                       \
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg           \
+    curl -fsSL https://download.docker.com/linux/debian/gpg           \
          | apt-key add - &&                                           \
 	                                                                  \
     apt-key fingerprint 0EBFCD88 &&                                   \
                                                                       \
     add-apt-repository                                                \
-       "deb [arch=amd64] https://download.docker.com/linux/ubuntu     \
+       "deb [arch=amd64] https://download.docker.com/linux/debian     \
        $(lsb_release -cs)                                             \
        stable" &&                                                     \
                                                                       \
@@ -134,7 +138,7 @@ RUN apt-get update &&                                                          \
 
 # Start Citadel with systemd
 COPY citadel-startup.service /lib/systemd/system/
-RUN ln -sf /lib/systemd/system/citadel-startup.service                                 \
+RUN ln -sf /lib/systemd/system/citadel-startup.service                         \
     /etc/systemd/system/multi-user.target.wants/citadel-startup.service
 
 # Set systemd as entrypoint.
