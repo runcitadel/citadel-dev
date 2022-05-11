@@ -71,6 +71,8 @@ https://github.com/nestybox/sysbox/blob/master/docs/user-guide/troubleshoot.md#d
 
 Make sure you have "overlay2" configured as your storage driver, see https://docs.docker.com/storage/storagedriver/overlayfs-driver/
 
+For Sysbox related issues see https://github.com/nestybox/sysbox/blob/master/docs/user-guide/troubleshoot.md
+
 ## License
 
 All code committed on and before git commit `874d4d8` is licensed via MIT and © Umbrel
