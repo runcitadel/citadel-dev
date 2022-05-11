@@ -14,6 +14,7 @@ Commands:
     install                            Builds the image and installs Docker + Sysbox
     dev [options]                      Initialize a development environment
     boot [options]                     Run a new container
+    list                               List all Citadel containers with their status in a table format
     start                              Start the container
     stop                               Stop the container
     reload                             Reloads the Citadel service
@@ -25,12 +26,10 @@ Commands:
     containers                         List container services
     rebuild <container>                Rebuild a container service
     app <command> [options]            Manages apps installations
-    bitcoin-cli <command>              Run bitcoin-cli with arguments
-    lncli <command>                    Run lncli with arguments
     fund <amount>                      Fund the onchain wallet (regtest mode only)
     auto-mine <seconds>                Generate a block continuously (regtest mode only)
     logs                               Stream Citadel logs
-    version                            # Show version information for this CLI
+    version                            Show version information for this CLI
 EOF
 }
 
@@ -80,7 +79,7 @@ EOF
 Citadel started in development mode with Bitcoin network set to ${1}.
 
 Yarn is installing dependencies and spinning up development servers.
-Run "${CLI_NAME} logs dashboard manager middleware" to see progress.
+Run \`${CLI_NAME} logs dashboard manager middleware\` to see progress.
 
 URLs:
 
@@ -117,7 +116,8 @@ get_script_location() {
     [[ $source != /* ]] && source="$dir/$source"
   done
   dir="$(cd -P "$(dirname "$source")" >/dev/null 2>&1 && pwd)"
-  echo $dir
+  # move up from scripts folder
+  echo "$dir/.."
 }
 
 # Check if required dependencies are installed
@@ -131,13 +131,62 @@ check_dependencies() {
       echo "  - Docker: https://docs.docker.com/get-docker/"
       echo "  - Sysbox: https://github.com/nestybox/sysbox/blob/master/docs/user-guide/install-package.md"
       echo
-      echo "or run \"$CLI_NAME install\""
+      echo "or run \`$CLI_NAME install\`"
       exit 1
     fi
   done
 }
 
-check_dev_environment() {
+check_container_exists() {
+  docker container inspect $1 &>/dev/null || {
+    echo "No container found with name or ID \"$1\"."
+    exit 1
+  }
+}
+
+# Check if container name is unambiguous
+check_container_name() {
+  is_dev_env=$(is_dev_environment)
+  is_multiple=$(check_multiple)
+
+  if $is_dev_env; then
+    if [ -s "$PWD/.citadel-dev" ]; then
+      return
+    else
+      echo "No container found for this environment. Try booting with \`citadel boot\`."
+      exit 1
+    fi
+  fi
+
+  return
+
+  # TODO: enable multiple
+  #   if ! $is_multiple; then
+  #     docker ps --all --filter "ancestor=$IMAGE_NAME" --format '{{.Names}}' || {
+  #       exit 1
+  #     }
+  #   else
+  #     cat >&2 <<EOF
+  # More than one instance of Citadel found on your system.
+  # Either run this command again from a Citadel environment
+  # or specify a target container. Run \`citadel list\`
+  # to get an ID or name of a target container.
+  # EOF
+  #     exit 1
+  #   fi
+}
+
+check_multiple() {
+  containers=($(docker ps --all --filter "ancestor=$IMAGE_NAME" --format '{{.Names}}'))
+
+  if [[ ${#containers[@]} -gt 1 ]]; then
+    echo true
+  else
+    echo false
+  fi
+}
+
+is_dev_environment() {
   if [ -f "$PWD/.citadel-dev" ]; then
     echo true
   else
@@ -145,20 +194,23 @@ check_dev_environment() {
   fi
 }
 
+get_container_name() {
+  is_dev_env=$(is_dev_environment)
+  # is_multiple=$(check_multiple)
+
+  if $is_dev_env; then
+    cat "$PWD/.citadel-dev"
+  else
+    echo 'citadel'
+  fi
+}
+
 get_container_ip() {
-  echo $(docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $CONTAINER_NAME)
+  echo $(docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $(get_container_name))
 }
 
 get_container_hostname() {
-  echo $(docker inspect --format='{{.Config.Hostname}}' $CONTAINER_NAME)
-}
-
-# Check if container exists
-check_container() {
-  docker container inspect $CONTAINER_NAME &>/dev/null || {
-    echo "No container found."
-    exit 1
-  }
+  echo $(docker inspect --format='{{.Config.Hostname}}' $(get_container_name))
 }
 
 # Check configured Bitcoin network directly from container
@@ -168,19 +220,29 @@ get_node_network() {
   echo $(trim $network)
 }
 
+# Check that command was called from a dev environment
+check_dev_environment() {
+  is_dev_env=$(is_dev_environment)
+
+  if ! $is_dev_env; then
+    echo "This command only works for Citadel development environments right now."
+    exit 1
+  fi
+}
+
 # Check that network is regtest
 check_node_network() {
   network=$(get_node_network)
 
   if [[ ! "$network" == *"regtest"* ]]; then
-    echo "This command only works on regtest."
+    echo "This command only works in regtest mode."
     exit 1
   fi
 }
 
 # Run a command inside the container
 run_in_container() {
-  docker exec -t $CONTAINER_NAME bash -c "cd /home/citadel/citadel && $1"
+  docker exec -t $(get_container_name) bash -c "cd /home/citadel/citadel && $1"
 }
 
 # Check if Dashboard is running

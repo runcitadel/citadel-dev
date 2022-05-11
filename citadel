@@ -9,7 +9,6 @@ CLI_NAME="$(basename $0)"
 CLI_VERSION="1.3.0"
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
 IMAGE_NAME=citadel
-CONTAINER_NAME=citadel
 
 if [ -z ${1+x} ]; then
   command=""
@@ -50,7 +49,7 @@ if [[ "$command" = "dev" ]]; then
 
   if [ -z ${1+x} ]; then
     printf "Missing target directory.\n"
-    echo "Usage: \"$CLI_NAME dev <directory>\""
+    echo "Usage: \`$CLI_NAME dev <directory>\`"
     exit 1
   fi
 
@@ -127,18 +126,18 @@ if [[ "$command" = "boot" ]]; then
 
   shift
 
-  development=$(check_dev_environment)
+  development=$(is_dev_environment)
 
   # default values
+  $development && name="citadel-dev" || name="citadel"
   $development && network="regtest" || network="mainnet"
-  $development && hostname="citadel-dev" || hostname="citadel"
   $development && verbose=true || verbose=false
 
   # parse arguments
   for arg in "$@"; do
     case "$arg" in
-    -h | --hostname)
-      hostname=$2
+    -n | --name)
+      name=$2
       shift 1
       ;;
     -n | --network)
@@ -165,11 +164,14 @@ if [[ "$command" = "boot" ]]; then
 
   if $development; then
     echo "Found Citadel Development environment. Booting in development mode..."
+    # save name to environment file
+    echo $name >$PWD/.citadel-dev
+
     docker run --detach --publish-all \
       --runtime sysbox-runc \
       --env NETWORK=$network \
-      --name $CONTAINER_NAME \
-      --hostname $hostname \
+      --name $name \
+      --hostname $name \
       --mount type=bind,source="$(pwd)/core",target=/home/citadel/citadel \
       --mount type=bind,source="$(pwd)/manager",target=/home/citadel/manager \
       --mount type=bind,source="$(pwd)/middleware",target=/home/citadel/middleware \
@@ -180,17 +182,15 @@ if [[ "$command" = "boot" ]]; then
       --mount type=bind,source="$(pwd)/utils",target=/home/citadel/utils \
       --mount type=bind,source="$(pwd)/node-lndconnect",target=/home/citadel/node-lndconnect \
       --mount type=bind,source="$(pwd)/bitcoin-rpc",target=/home/citadel/bitcoin-rpc \
-      $IMAGE_NAME
+      $IMAGE_NAME &>/dev/null || {
+      echo "Container with name \"$name\" exists already. Either remove (or rename) it or create a new one by passing a different name with \`$CLI_NAME boot --name <name>\`."
+      exit 1
+    }
   else
     echo "Booting..."
-    docker run --runtime sysbox-runc --env NETWORK=$network --detach --publish-all --name $CONTAINER_NAME --hostname $hostname $IMAGE_NAME &>/dev/null || {
-      read -p "The container exists already. Do you want to start it? (y/N) " should_start
-      echo
-      if [[ $should_start =~ [Yy]$ ]]; then
-        $CLI_NAME start
-      else
-        exit 1
-      fi
+    docker run --runtime sysbox-runc --env NETWORK=$network --detach --publish-all --name $name --hostname $name $IMAGE_NAME &>/dev/null || {
+      echo "Container with name \"$name\" exists already. Either remove (or rename) it or create a new one by passing a different name with \`$CLI_NAME boot --name <name>\`."
+      exit 1
     }
   fi
 
@@ -216,25 +216,35 @@ if [[ "$command" = "boot" ]]; then
   exit
 fi
 
-# List all containers
-if [[ "$command" = "list" ]]; then
+# List all Citadel containers with their status in a table format
+if [[ "$command" = "list" ]] || [[ "$command" = "ls" ]]; then
   check_dependencies
 
-  docker ps --filter "name=citadel"
-  # $(docker ps --filter "name=citadel")
+  TEMPFILE=$(mktemp)
+  trap "rm -f $TEMPFILE" EXIT
+
+  echo "NAME|CONTAINER ID|HOSTNAME|IP|STATUS" >>$TEMPFILE
+
+  containers=$(docker ps --all --filter "ancestor=citadel" --format '{{.Names}}')
+  for container in $containers; do
+    info=$(docker inspect -f '{{.Id}}|{{.Config.Hostname}}|{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}|{{.State.Status}}' $container)
+    echo "$container|$info" >>$TEMPFILE
+  done
+
+  column -t -s'|' $TEMPFILE
+
   exit
 fi
 
 # Get an SSH session inside the container
 if [[ "$command" = "ssh" ]]; then
   check_dependencies
-  check_container
 
   # get host IPs
   addresses=($(ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p'))
 
   # get container port
-  port=$(docker container inspect --format='{{(index (index .NetworkSettings.Ports "22/tcp") 0).HostPort}}' $CONTAINER_NAME)
+  port=$(docker container inspect --format='{{(index (index .NetworkSettings.Ports "22/tcp") 0).HostPort}}' $(get_container_name))
 
   if [ -z ${2+x} ]; then
     ssh -t citadel@${addresses[0]} -p $port 'cd /home/citadel/citadel && exec bash -l'
@@ -271,14 +281,22 @@ fi
 # Start the container
 if [[ "$command" = "start" ]]; then
   check_dependencies
-  check_container
 
-  if [ "$(docker container inspect -f '{{.State.Running}}' $CONTAINER_NAME)" == "true" ]; then
+  # get target container
+  if [ -z ${2+x} ]; then
+    check_container_name
+    target_container=$(get_container_name)
+  else
+    target_container=$2
+  fi
+  check_container_exists $target_container
+
+  if [ "$(docker container inspect -f '{{.State.Running}}' $target_container)" == "true" ]; then
     echo "Citadel is already running"
     exit 1
   else
     printf "Starting Citadel...\n\n"
-    docker start $CONTAINER_NAME &>/dev/null
+    docker start $target_container &>/dev/null
     printf "Citadel started.\n\n"
     read -p "Do you want to log in now? (y/N) " should_login
     echo
@@ -292,17 +310,33 @@ fi
 # Stop the container
 if [[ "$command" = "stop" ]]; then
   check_dependencies
-  check_container
+
+  # get target container
+  if [ -z ${2+x} ]; then
+    check_container_name
+    target_container=$(get_container_name)
+  else
+    target_container=$2
+  fi
+  check_container_exists $target_container
 
   echo "Shutting down Citadel..."
-  docker stop $CONTAINER_NAME &>/dev/null
+  docker stop $target_container &>/dev/null
   exit
 fi
 
 # Reload the Citadel service
 if [[ "$command" = "reload" ]]; then
   check_dependencies
-  check_container
+
+  # get target container
+  if [ -z ${2+x} ]; then
+    check_container_name
+    target_container=$(get_container_name)
+  else
+    target_container=$2
+  fi
+  check_container_exists $target_container
 
   printf "Reloading the Citadel service...\n\n"
   run_in_container "scripts/stop && scripts/configure && scripts/start"
@@ -312,15 +346,23 @@ fi
 # Destroy the container
 if [[ "$command" = "destroy" ]]; then
   check_dependencies
-  check_container
+
+  # get target container
+  if [ -z ${2+x} ]; then
+    check_container_name
+    target_container=$(get_container_name)
+  else
+    target_container=$2
+  fi
+  check_container_exists $target_container
 
   echo "WARNING: This will completely remove the container and its data."
-  echo "If you just want to stop the container run \"$CLI_NAME stop\""
+  echo "If you just want to stop the container run \`$CLI_NAME stop\`"
   read -p "Are you sure? (y/N) "
   echo
   if [[ $REPLY =~ [Yy]$ ]]; then
     echo "Destroying container..."
-    docker rm -f $CONTAINER_NAME &>/dev/null
+    docker rm -f $target_container &>/dev/null
     echo "Citadel container destroyed"
   else
     echo "Cancelled."
@@ -331,7 +373,7 @@ fi
 # List container services
 if [[ "$command" = "containers" ]]; then
   check_dependencies
-  check_container
+  check_container_name
 
   run_in_container "docker compose config --services"
   exit
@@ -340,7 +382,7 @@ fi
 # Rebuild a container service
 if [[ "$command" = "rebuild" ]]; then
   check_dependencies
-  check_container
+  check_container_name
 
   if [ -z ${2+x} ]; then
     echo "A second argument is required!"
@@ -359,14 +401,14 @@ fi
 # Backup the container
 if [[ "$command" = "backup" ]]; then
   check_dependencies
-  check_container
+  check_container_name
 
   current_date=$(date '+%Y-%m-%d')
 
   echo "Stopping Citadel services..."
   run_in_container "scripts/stop" &>/dev/null
   echo "Creating snapshot..."
-  docker commit $CONTAINER_NAME citadel-backup:${current_date}
+  docker commit $(get_container_name) citadel-backup:${current_date}
   echo "Backing up..."
   docker save citadel-backup:${current_date} | gzip >citadel-backup-${current_date}.tar.gz
   echo "Cleaning up..."
@@ -388,7 +430,7 @@ if [[ "$command" = "restore" ]]; then
   backup_date=${2:15:10}
 
   # check for current container
-  docker container inspect $CONTAINER_NAME &>/dev/null || {
+  docker container inspect $(get_container_name) &>/dev/null || {
     # load & rename
     echo "Restoring from backup $2..."
     docker load <$2
@@ -411,11 +453,11 @@ if [[ "$command" = "restore" ]]; then
   echo
   if [[ $should_overwrite =~ [Yy]$ ]]; then
     echo "Destroying current Citadel..."
-    docker rm $CONTAINER_NAME &>/dev/null || {
+    docker rm $(get_container_name) &>/dev/null || {
       echo 'Citadel is still running. Stop it and try again.'
       exit
     }
-    docker rmi citadel &>/dev/null
+    docker rmi $IMAGE_NAME &>/dev/null
     echo "Citadel image destroyed."
     $CLI_NAME restore $2
   else
@@ -427,7 +469,7 @@ fi
 # Rebuild a container service
 if [[ "$command" = "app" ]]; then
   check_dependencies
-  check_container
+  check_container_name
 
   if [ -z ${2+x} ]; then
     echo "A second argument is required!"
@@ -443,7 +485,7 @@ fi
 # Stream Citadel logs
 if [[ "$command" = "logs" ]]; then
   check_dependencies
-  check_container
+  check_container_name
 
   shift
   args="$@"
@@ -460,7 +502,7 @@ fi
 # Run a command inside the container
 if [[ "$command" = "run" ]]; then
   check_dependencies
-  check_container
+  check_container_name
 
   if [ -z ${2+x} ]; then
     echo "A second argument is required!"
@@ -474,7 +516,8 @@ fi
 # Run bitcoin-cli with arguments
 if [[ "$command" = "bitcoin-cli" ]]; then
   check_dependencies
-  check_container
+  check_container_name
+  check_inner_container "bitcoin"
 
   if [ -z ${2+x} ]; then
     args=""
@@ -488,7 +531,8 @@ fi
 # Run lncli with arguments
 if [[ "$command" = "lncli" ]]; then
   check_dependencies
-  check_container
+  check_container_name
+  check_inner_container "lightning"
 
   if [ -z ${2+x} ]; then
     args=""
@@ -502,7 +546,7 @@ fi
 # Fund the wallet
 if [[ "$command" = "fund" ]]; then
   check_dependencies
-  check_container
+  check_dev_environment
   check_node_network
   check_inner_container "lightning"
   check_inner_container "bitcoin"
@@ -545,7 +589,7 @@ fi
 # Generate a block continuously
 if [[ "$command" = "auto-mine" ]]; then
   check_dependencies
-  check_container
+  check_dev_environment
   check_node_network
   check_inner_container "bitcoin"
 
