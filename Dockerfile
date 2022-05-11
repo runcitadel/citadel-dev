@@ -1,4 +1,4 @@
-FROM debian:stable-slim as systemd
+FROM debian@sha256:fbaacd55d14bd0ae0c0441c2347217da77ad83c517054623357d1f9d07f79f5e as systemd
 
 #
 # Systemd installation
