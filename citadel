@@ -206,7 +206,7 @@ if [[ "$command" = "boot" ]]; then
     stop_spinner $?
   fi
 
-  show_welcome $network $hostname $(get_container_ip) $development
+  show_welcome $network $name $(get_container_ip) $development
   read -p "Do you want to log in now? (y/N) " should_login
   echo
   if [[ $should_login =~ [Yy]$ ]]; then
