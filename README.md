@@ -1,8 +1,8 @@
-# Citadel (Docker-in-Docker)
+# Citadel CLI
 
 Automatically initialize and manage a Citadel.
 
-This installation method uses nested Docker containers for a lightweight and fast way to get up and running with Citadel.
+This installation method uses nested Docker containers (Docker-in-Docker) for a lightweight and fast way to get up and running with Citadel.
 Sysbox enables us to do this in a way that is **easy and secure**. The inner Docker is **totally isolated** from the Docker on the host.
 
 ## Installation
@@ -15,8 +15,8 @@ Sysbox enables us to do this in a way that is **easy and secure**. The inner Doc
 
 ### Install & Update Script
 
-```
-mkdir -p ~/.citadel && curl -#L https://github.com/runcitadel/citadel-dev/tarball/docker-in-docker | tar -xzv --strip-components 1 --exclude={README.md,LICENSES,LICENSE,.gitignore} -C ~/.citadel
+```shell
+mkdir -p ~/.citadel && curl -#L https://github.com/runcitadel/citadel-dev/tarball/main | tar -xzv --strip-components 1 --exclude={README.md,LICENSES,LICENSE,.gitignore} -C ~/.citadel
 ```
 
 Running the above command downloads the repository to ~/.citadel. To update later on, just run that command again.
@@ -25,7 +25,7 @@ Running the above command downloads the repository to ~/.citadel. To update late
 
 Make the command available in your shell
 
-```
+```shell
 export PATH="$PATH:$HOME/.citadel/bin"
 ```
 
@@ -43,20 +43,23 @@ citadel install
 
 Start Citadel and login in with the default credentials (user: _citadel_, password: _freedom_)
 
-```
+```shell
 citadel boot
 ```
 
 List all possible commands
 
-```
+```shell
 citadel help
 ```
 
 ## Development
 
-```
-citadel dev <my-dev-machine>
+This CLI also serves as an easy way to bootstrap a development environment with hot module replacement for rapid iterations.
+For linking @runcitadel packages use `yarn link -r ../<package>` & `yarn unlink ../<package>` as needed from the appropriate directory.
+
+```shell
+citadel dev <directory>
 ```
 
 ## Troubleshoot
