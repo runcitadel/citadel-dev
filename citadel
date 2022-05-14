@@ -39,6 +39,13 @@ if [[ "$command" = "install" ]]; then
     sudo $SCRIPT_DIR/../scripts/install-sysbox.sh
   fi
 
+  # install other misc deps if on linux
+  if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    echo 'Installing miscelaneous linux dependencies...'    
+    sudo $SCRIPT_DIR/../scripts/install-linux-deps.sh
+  fi
+
+
   echo 'Citadel dependencies installed successfully.'
   exit
 fi
@@ -168,7 +175,7 @@ if [[ "$command" = "boot" ]]; then
     echo $name >$PWD/.citadel-dev
 
     docker run --detach --publish-all \
-      --runtime sysbox-runc \
+      --runtime runc \
       --env NETWORK=$network \
       --name $name \
       --hostname $name \
@@ -188,7 +195,7 @@ if [[ "$command" = "boot" ]]; then
     }
   else
     echo "Booting..."
-    docker run --runtime sysbox-runc --env NETWORK=$network --detach --publish-all --name $name --hostname $name $IMAGE_NAME || {
+    docker run --runtime runc --env NETWORK=$network --detach --publish-all --name $name --hostname $name $IMAGE_NAME || {
       echo "Container with name \"$name\" exists already. Either remove (or rename) it or create a new one by passing a different name with \`$CLI_NAME boot --name <name>\`."
       exit 1
     }

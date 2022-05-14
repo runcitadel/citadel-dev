@@ -6,12 +6,6 @@ if [ "$EUID" -ne 0 ]; then
     exit
 fi
 
-# check if installed
-if command -v "sysbox" >/dev/null 2>&1; then
-    echo 'Error: the "sysbox" command appears to already exist on this system.'
-    exit 1
-fi
-
 # confirm
 printf "\n# ATTENTION: This script will build Sysbox from source which can take a long time.\n"
 echo "To get the packaged version for your system see installation instructions at"
