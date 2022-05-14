@@ -182,13 +182,13 @@ if [[ "$command" = "boot" ]]; then
       --mount type=bind,source="$(pwd)/utils",target=/home/citadel/utils \
       --mount type=bind,source="$(pwd)/node-lndconnect",target=/home/citadel/node-lndconnect \
       --mount type=bind,source="$(pwd)/bitcoin-rpc",target=/home/citadel/bitcoin-rpc \
-      $IMAGE_NAME &>/dev/null || {
+      $IMAGE_NAME || {
       echo "Container with name \"$name\" exists already. Either remove (or rename) it or create a new one by passing a different name with \`$CLI_NAME boot --name <name>\`."
       exit 1
     }
   else
     echo "Booting..."
-    docker run --runtime sysbox-runc --env NETWORK=$network --detach --publish-all --name $name --hostname $name $IMAGE_NAME &>/dev/null || {
+    docker run --runtime sysbox-runc --env NETWORK=$network --detach --publish-all --name $name --hostname $name $IMAGE_NAME || {
       echo "Container with name \"$name\" exists already. Either remove (or rename) it or create a new one by passing a different name with \`$CLI_NAME boot --name <name>\`."
       exit 1
     }
