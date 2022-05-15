@@ -50,14 +50,6 @@ if [[ "$command" = "install" ]]; then
     sudo $SCRIPT_DIR/../scripts/install-sysbox.sh
   fi
 
-  # install ifconfig
-  if command -v "ifconfig" >/dev/null 2>&1; then
-      echo 'ifconfig is already installed. Skipping...'
-    else
-    sudo $SCRIPT_DIR/../scripts/install-ifconfig.sh
-  fi
-
-
   echo 'Citadel dependencies installed successfully.'
   exit
 fi
