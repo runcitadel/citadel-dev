@@ -110,20 +110,20 @@ get_script_location() {
   source="${BASH_SOURCE[0]}"
   # Resolve $source until the file is no longer a symlink
   while [ -h "$source" ]; do
-    dir="$(cd -P "$(dirname "$source")" >/dev/null 2>&1 && pwd)"
+    dir="$(cd -P "$(dirname "$source")" 2>&1 && pwd)"
     source="$(readlink "$source")"
     # If $source was a relative symlink, we need to resolve it relative to the path where the symlink file was located
     [[ $source != /* ]] && source="$dir/$source"
   done
-  dir="$(cd -P "$(dirname "$source")" >/dev/null 2>&1 && pwd)"
+  dir="$(cd -P "$(dirname "$source")" 2>&1 && pwd)"
   # move up from scripts folder
   echo "$dir/.."
 }
 
 # Check if required dependencies are installed
 check_dependencies() {
-  for cmd in "git" "docker" "sysbox"; do
-    if ! command -v $cmd >/dev/null 2>&1; then
+  for cmd in "git" "docker" "sysbox-runc"; do
+    if ! command -v $cmd 2>&1; then
       echo "This script requires Git, Docker and Sysbox to be installed."
       echo
       echo "See:"
