@@ -6,9 +6,9 @@ source $(dirname $0)/../scripts/spinner.sh
 source $(dirname $0)/../scripts/utils.sh
 
 CLI_NAME="$(basename $0)"
-CLI_VERSION="1.3.0"
+CLI_VERSION="1.3.1"
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
-IMAGE_NAME=citadel
+IMAGE_NAME="ghcr.io/runcitadel/citadel-dev"
 
 if [ -z ${1+x} ]; then
   command=""
@@ -25,11 +25,6 @@ if [[ "$command" = "install" ]]; then
   else
     sudo $SCRIPT_DIR/../scripts/install-docker.sh
   fi
-
-  # build Citadel Docker image
-  # TODO: host the image remotely
-  echo 'Building Docker image...'
-  docker build -t $IMAGE_NAME $SCRIPT_DIR/..
 
   # install Sysbox
   echo 'Installing Sysbox...'
@@ -226,7 +221,7 @@ if [[ "$command" = "list" ]] || [[ "$command" = "ls" ]]; then
 
   echo "NAME|CONTAINER ID|HOSTNAME|IP|STATUS" >>$TEMPFILE
 
-  containers=$(docker ps --all --filter "ancestor=citadel" --format '{{.Names}}')
+  containers=$(docker ps --all --filter "ancestor=$IMAGE_NAME" --format '{{.Names}}')
   for container in $containers; do
     info=$(docker inspect -f '{{.Id}}|{{.Config.Hostname}}|{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}|{{.State.Status}}' $container)
     echo "$container|$info" >>$TEMPFILE
