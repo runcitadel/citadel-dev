@@ -5,10 +5,21 @@ source $(dirname $0)/../scripts/functions.sh
 source $(dirname $0)/../scripts/spinner.sh
 source $(dirname $0)/../scripts/utils.sh
 
+# Default to no logging (stdout and stderr to null)
+VERBOSE=&>/dev/null
+
+# Switch stdout and stderr back to normal if verbose option is sent in
+while [[ "$1" =~ ^- && ! "$1" == "--" ]]; do
+if [ "$1" == "-v" ] || [ "$1" == "-verbose" ]; then
+  VERBOSE=""
+fi
+shift; done
+
 CLI_NAME="$(basename $0)"
 CLI_VERSION="1.3.0"
-SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" ${VERBOSE} && pwd)
 IMAGE_NAME=citadel
+
 
 if [ -z ${1+x} ]; then
   command=""
@@ -20,7 +31,7 @@ fi
 if [[ "$command" = "install" ]]; then
   # install Docker
   echo 'Installing Docker...'
-  if command -v "docker" >/dev/null 2>&1; then
+  if command -v "docker" 2>&1; then
     echo 'Docker is already installed. Skipping...'
   else
     sudo $SCRIPT_DIR/../scripts/install-docker.sh
@@ -39,10 +50,11 @@ if [[ "$command" = "install" ]]; then
     sudo $SCRIPT_DIR/../scripts/install-sysbox.sh
   fi
 
-  # install other misc deps if on linux
-  if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-    echo 'Installing miscelaneous linux dependencies...'    
-    sudo $SCRIPT_DIR/../scripts/install-linux-deps.sh
+  # install ifconfig
+  if command -v "ifconfig" >/dev/null 2>&1; then
+      echo 'ifconfig is already installed. Skipping...'
+    else
+    sudo $SCRIPT_DIR/../scripts/install-ifconfig.sh
   fi
 
 
@@ -189,13 +201,14 @@ if [[ "$command" = "boot" ]]; then
       --mount type=bind,source="$(pwd)/utils",target=/home/citadel/utils \
       --mount type=bind,source="$(pwd)/node-lndconnect",target=/home/citadel/node-lndconnect \
       --mount type=bind,source="$(pwd)/bitcoin-rpc",target=/home/citadel/bitcoin-rpc \
-      $IMAGE_NAME || {
+      $IMAGE_NAME \
+      $VERBOSE || {
       echo "Container with name \"$name\" exists already. Either remove (or rename) it or create a new one by passing a different name with \`$CLI_NAME boot --name <name>\`."
       exit 1
     }
   else
     echo "Booting..."
-    docker run --runtime sysbox-runc- -env NETWORK=$network --detach --publish-all --name $name --hostname $name $IMAGE_NAME || {
+    docker run --runtime sysbox-runc- -env NETWORK=$network --detach --publish-all --name $name --hostname $name $IMAGE_NAME $VERBOSE || {
       echo "Container with name \"$name\" exists already. Either remove (or rename) it or create a new one by passing a different name with \`$CLI_NAME boot --name <name>\`."
       exit 1
     }
@@ -303,7 +316,7 @@ if [[ "$command" = "start" ]]; then
     exit 1
   else
     printf "Starting Citadel...\n\n"
-    docker start $target_container &>/dev/null
+    docker start $target_container $VERBOSE
     printf "Citadel started.\n\n"
     read -p "Do you want to log in now? (y/N) " should_login
     echo
@@ -328,7 +341,7 @@ if [[ "$command" = "stop" ]]; then
   check_container_exists $target_container
 
   echo "Shutting down Citadel..."
-  docker stop $target_container &>/dev/null
+  docker stop $target_container $VERBOSE
   exit
 fi
 
@@ -369,7 +382,7 @@ if [[ "$command" = "destroy" ]]; then
   echo
   if [[ $REPLY =~ [Yy]$ ]]; then
     echo "Destroying container..."
-    docker rm -f $target_container &>/dev/null
+    docker rm -f $target_container $VERBOSE
     echo "Citadel container destroyed"
   else
     echo "Cancelled."
@@ -413,13 +426,13 @@ if [[ "$command" = "backup" ]]; then
   current_date=$(date '+%Y-%m-%d')
 
   echo "Stopping Citadel services..."
-  run_in_container "scripts/stop" &>/dev/null
+  run_in_container "scripts/stop" $VERBOSE
   echo "Creating snapshot..."
   docker commit $(get_container_name) citadel-backup:${current_date}
   echo "Backing up..."
   docker save citadel-backup:${current_date} | gzip >citadel-backup-${current_date}.tar.gz
   echo "Cleaning up..."
-  docker rmi citadel-backup:${current_date} &>/dev/null
+  docker rmi citadel-backup:${current_date} $VERBOSE
   echo "Done! Backup saved to ./citadel-backup-${current_date}.tar.gz"
   exit
 fi
@@ -437,13 +450,13 @@ if [[ "$command" = "restore" ]]; then
   backup_date=${2:15:10}
 
   # check for current container
-  docker container inspect $(get_container_name) &>/dev/null || {
+  docker container inspect $(get_container_name) $VERBOSE || {
     # load & rename
     echo "Restoring from backup $2..."
     docker load <$2
     docker tag citadel-backup:${backup_date} $IMAGE_NAME
     echo "Cleaning up..."
-    docker rmi citadel-backup:${backup_date} &>/dev/null
+    docker rmi citadel-backup:${backup_date} $VERBOSE
     read -p "Backup restored successfully. Do you want to boot it now? (y/N) " should_boot
     echo
     if [[ $should_boot =~ [Yy]$ ]]; then
@@ -460,11 +473,11 @@ if [[ "$command" = "restore" ]]; then
   echo
   if [[ $should_overwrite =~ [Yy]$ ]]; then
     echo "Destroying current Citadel..."
-    docker rm $(get_container_name) &>/dev/null || {
+    docker rm $(get_container_name) $VERBOSE || {
       echo 'Citadel is still running. Stop it and try again.'
       exit
     }
-    docker rmi $IMAGE_NAME &>/dev/null
+    docker rmi $IMAGE_NAME $VERBOSE
     echo "Citadel image destroyed."
     $CLI_NAME restore $2
   else
@@ -571,8 +584,8 @@ if [[ "$command" = "fund" ]]; then
   fi
 
   # Check Bitcoin Core wallet exists
-  $CLI_NAME bitcoin-cli unloadwallet $wallet_name &>/dev/null || true
-  $CLI_NAME bitcoin-cli loadwallet $wallet_name &>/dev/null || {
+  $CLI_NAME bitcoin-cli unloadwallet $wallet_name $VERBOSE || true
+  $CLI_NAME bitcoin-cli loadwallet $wallet_name $VERBOSE || {
     # Create a wallet if it doesn't exist
     $CLI_NAME bitcoin-cli createwallet $wallet_name
   }
@@ -605,10 +618,10 @@ if [[ "$command" = "auto-mine" ]]; then
   wallet_name="mywallet"
 
   # Check Bitcoin Core wallet exists
-  $CLI_NAME bitcoin-cli unloadwallet $wallet_name &>/dev/null || true
-  $CLI_NAME bitcoin-cli loadwallet $wallet_name &>/dev/null || {
+  $CLI_NAME bitcoin-cli unloadwallet $wallet_name $VERBOSE || true
+  $CLI_NAME bitcoin-cli loadwallet $wallet_name $VERBOSE || {
     # Create a wallet if it doesn't exist
-    $CLI_NAME bitcoin-cli createwallet $wallet_name &>/dev/null
+    $CLI_NAME bitcoin-cli createwallet $wallet_name $VERBOSE
     echo "Created new Bitcoin Core wallet $wallet_name"
   }
 
