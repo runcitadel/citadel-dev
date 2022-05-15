@@ -314,12 +314,7 @@ if [[ "$command" = "start" ]]; then
     exit 1
   else
     printf "Starting Citadel...\n\n"
-<<<<<<< HEAD
-    docker start $target_container $VERBOSE
-=======
-    # ignore stdout, but show stderr
-    docker start $target_container 2>&1 >/dev/null
->>>>>>> main
+    docker start $target_container $VERBOSE >/dev/null
     printf "Citadel started.\n\n"
     read -p "Do you want to log in now? (y/N) " should_login
     echo
@@ -344,11 +339,7 @@ if [[ "$command" = "stop" ]]; then
   check_container_exists $target_container
 
   echo "Shutting down Citadel..."
-<<<<<<< HEAD
   docker stop $target_container $VERBOSE
-=======
-  docker stop $target_container 2>&1 >/dev/null
->>>>>>> main
   exit
 fi
 
