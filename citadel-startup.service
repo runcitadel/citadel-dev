@@ -21,17 +21,5 @@ ExecStart=/home/citadel/citadel/scripts/configure ; /home/citadel/citadel/script
 ExecReload=/home/citadel/citadel/scripts/configure ; /home/citadel/citadel/scripts/start
 ExecStop=/home/citadel/citadel/scripts/stop
 
-# [Service]
-# Type=forking
-# TimeoutStartSec=infinity
-# TimeoutStopSec=16min
-# ExecStart=/home/citadel/citadel/scripts/start
-# ExecStop=/home/citadel/citadel/scripts/stop
-# User=root
-# Group=root
-# RemainAfterExit=yes
-# Restart=always
-# RestartSec=10
-
 [Install]
 WantedBy=multi-user.target

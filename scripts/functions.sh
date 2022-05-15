@@ -277,32 +277,3 @@ check_inner_container() {
     exit 1
   fi
 }
-
-# Run bitcoin-cli with arguments
-bitcoin_cli() {
-  check_dependencies
-  check_container_name
-
-  if [ -z ${2+x} ]; then
-    args=""
-  else
-    args="${@:2}"
-  fi
-  run_in_container "docker exec -t bitcoin bitcoin-cli ${args}"
-  exit
-}
-
-# Run lncli with arguments
-lncli() {
-  check_dependencies
-  check_container_name
-
-  if [ -z ${2+x} ]; then
-    args=""
-  else
-    args="${@:2}"
-  fi
-
-  run_in_container "docker exec -t lightning lncli ${args}"
-  exit
-}
