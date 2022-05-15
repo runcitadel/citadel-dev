@@ -217,6 +217,7 @@ if [[ "$command" = "boot" ]]; then
   if $verbose; then
     echo 'Citadel is starting up. Listening for logs...'
     # wait for container
+    # TODO: this is very unreliable
     sleep 5
     # Log until Citadel is up
     run_in_container "journalctl -f -u citadel-startup | sed '/Citadel is now accessible at/ q'"
@@ -259,12 +260,17 @@ fi
 # Get an SSH session inside the container
 if [[ "$command" = "ssh" ]]; then
   check_dependencies
+  check_container_name
+  target_container=$(get_container_name)
+  check_container_running $target_container
+
+  # TODO: add target argument
 
   # get host IPs
-  addresses=($(ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p'))
+  addresses=($(ip addr | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p'))
 
   # get container port
-  port=$(docker container inspect --format='{{(index (index .NetworkSettings.Ports "22/tcp") 0).HostPort}}' $(get_container_name))
+  port=$(docker container inspect --format='{{(index (index .NetworkSettings.Ports "22/tcp") 0).HostPort}}' $target_container)
 
   if [ -z ${2+x} ]; then
     ssh -t citadel@${addresses[0]} -p $port 'cd /home/citadel/citadel && exec bash -l'
@@ -316,7 +322,12 @@ if [[ "$command" = "start" ]]; then
     exit 1
   else
     printf "Starting Citadel...\n\n"
+<<<<<<< HEAD
     docker start $target_container $VERBOSE
+=======
+    # ignore stdout, but show stderr
+    docker start $target_container 2>&1 >/dev/null
+>>>>>>> main
     printf "Citadel started.\n\n"
     read -p "Do you want to log in now? (y/N) " should_login
     echo
@@ -341,7 +352,11 @@ if [[ "$command" = "stop" ]]; then
   check_container_exists $target_container
 
   echo "Shutting down Citadel..."
+<<<<<<< HEAD
   docker stop $target_container $VERBOSE
+=======
+  docker stop $target_container 2>&1 >/dev/null
+>>>>>>> main
   exit
 fi
 

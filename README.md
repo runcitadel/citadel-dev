@@ -16,7 +16,7 @@ Sysbox enables us to do this in a way that is **easy and secure**. The inner Doc
 ### Install & Update Script
 
 ```shell
-mkdir -p ~/.citadel && curl -#L https://github.com/runcitadel/citadel-dev/tarball/main | tar -xzv --strip-components 1 --exclude={README.md,LICENSES,LICENSE,.gitignore} -C ~/.citadel
+mkdir -p ~/.citadel && curl -#L https://github.com/runcitadel/citadel-dev/tarball/main | tar -xzv --strip-components 1 --exclude={README.md,LICENSES,LICENSE,.gitignore,.github} -C ~/.citadel
 ```
 
 Running the above command downloads the repository to ~/.citadel. To update later on, just run that command again.

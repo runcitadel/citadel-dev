@@ -95,7 +95,7 @@ EOF
     cat <<EOF
 Citadel is running with Bitcoin network set to ${1}.
 
-Dashboard is listening at:
+Dashboard listening at:
 
   - http://${2}.local
   - http://${3}
@@ -142,6 +142,15 @@ check_container_exists() {
     echo "No container found with name or ID \"$1\"."
     exit 1
   }
+}
+
+check_container_running() {
+  status=$(docker container inspect -f '{{.State.Status}}' $1)
+
+  if [[ ! $(trim $status) == "running" ]]; then
+    echo "Container \"$1\" is not running."
+    exit 1
+  fi
 }
 
 # Check if container name is unambiguous
@@ -247,6 +256,7 @@ run_in_container() {
 
 # Check if Dashboard is running
 wait_for_dashboard() {
+  # TOOD: fix for multiple prod
   while true; do
     run_in_container "docker logs dashboard" &>/dev/null || {
       # echo "Dashboard is not running. Trying again in 5 seconds..."
@@ -266,4 +276,33 @@ check_inner_container() {
     echo "Container \"$1\" is not running."
     exit 1
   fi
+}
+
+# Run bitcoin-cli with arguments
+bitcoin_cli() {
+  check_dependencies
+  check_container_name
+
+  if [ -z ${2+x} ]; then
+    args=""
+  else
+    args="${@:2}"
+  fi
+  run_in_container "docker exec -t bitcoin bitcoin-cli ${args}"
+  exit
+}
+
+# Run lncli with arguments
+lncli() {
+  check_dependencies
+  check_container_name
+
+  if [ -z ${2+x} ]; then
+    args=""
+  else
+    args="${@:2}"
+  fi
+
+  run_in_container "docker exec -t lightning lncli ${args}"
+  exit
 }
