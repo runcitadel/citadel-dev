@@ -6,7 +6,7 @@ source $(dirname $0)/../scripts/spinner.sh
 source $(dirname $0)/../scripts/utils.sh
 
 CLI_NAME="$(basename $0)"
-CLI_VERSION="1.3.1"
+CLI_VERSION="1.3.2"
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
 IMAGE_NAME="ghcr.io/runcitadel/citadel-dev"
 
@@ -158,7 +158,7 @@ if [[ "$command" = "boot" ]]; then
   done
 
   if $development; then
-    echo "Found Citadel Development environment. Booting in development mode..."
+    echo "Found Citadel development environment. Booting in development mode..."
     # save name to environment file
     echo $name >$PWD/.citadel-dev
 
@@ -236,45 +236,44 @@ fi
 if [[ "$command" = "ssh" ]]; then
   check_dependencies
   check_container_name
-  target_container=$(get_container_name)
-  check_container_running $target_container
-
-  # TODO: add target argument
 
   # get host IPs
   addresses=($(ip addr | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p'))
 
-  # get container port
+  # get target container and its port
+  target_container=$(get_container_name)
+  check_container_running $target_container
   port=$(docker container inspect --format='{{(index (index .NetworkSettings.Ports "22/tcp") 0).HostPort}}' $target_container)
 
-  if [ -z ${2+x} ]; then
-    ssh -t citadel@${addresses[0]} -p $port 'cd /home/citadel/citadel && exec bash -l'
-  else
-    shift
+  if [[ $# -eq 2 ]]; then
+    if [[ $2 == 'list' ]]; then
+      printf "Use one of the following commands to ssh into \"$target_container\" from another device:\n\n"
+      for address in ${addresses[@]}; do
+        echo "ssh citadel@${address} -p $port"
+      done
+      exit
+    fi
 
-    # parse arguments
-    for arg in "$@"; do
-      case "$arg" in
-      list)
-        printf "Use one of the following commands to ssh in from another device:\n\n"
-        for address in ${addresses[@]}; do
-          echo "ssh citadel@${address} -p $port"
-        done
-        exit 1
-        ;;
-      help | *)
-        cat <<EOF
-Usage: ${CLI_NAME} ssh <command>
+    if [[ $2 == '--help' ]]; then
+      cat <<EOF
+Usage: ${CLI_NAME} ssh <argument>
 
-Commands:
-    help              Show this help message
+Arguments:
+    <target>          Specify a target container
     list              List IP adresses
+    --help            Show this help message
 EOF
-        exit 1
-        ;;
-      esac
-    done
+      exit
+    fi
+
+    # target specified
+    # get container and port again
+    target_container=$2
+    check_container_running $target_container
+    port=$(docker container inspect --format='{{(index (index .NetworkSettings.Ports "22/tcp") 0).HostPort}}' $target_container)
   fi
+
+  ssh -t citadel@${addresses[1]} -p $port 'cd /home/citadel/citadel && exec bash -l'
 
   exit
 fi
@@ -293,7 +292,7 @@ if [[ "$command" = "start" ]]; then
   check_container_exists $target_container
 
   if [ "$(docker container inspect -f '{{.State.Running}}' $target_container)" == "true" ]; then
-    echo "Citadel is already running"
+    echo "Citadel is already running."
     exit 1
   else
     printf "Starting Citadel...\n\n"
@@ -359,13 +358,13 @@ if [[ "$command" = "destroy" ]]; then
   check_container_exists $target_container
 
   echo "WARNING: This will completely remove the container and its data."
-  echo "If you just want to stop the container run \`$CLI_NAME stop\`"
+  echo "If you just want to stop the container run \`$CLI_NAME stop\`."
   read -p "Are you sure? (y/N) "
   echo
   if [[ $REPLY =~ [Yy]$ ]]; then
     echo "Destroying container..."
     docker rm -f $target_container &>/dev/null
-    echo "Citadel container destroyed"
+    echo "Citadel container destroyed."
   else
     echo "Cancelled."
   fi
@@ -463,7 +462,7 @@ if [[ "$command" = "restore" ]]; then
     echo "Citadel image destroyed."
     $CLI_NAME restore $2
   else
-    echo "Cancelled"
+    echo "Cancelled."
   fi
   exit
 fi
