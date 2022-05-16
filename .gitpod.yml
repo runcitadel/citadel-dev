@@ -1,6 +1,0 @@
-tasks:
-  - name: Set up citadel-dev
-    command: >-
-        yes | bin/citadel install
-        touch .citadel-dev
-        bin/citadel boot
