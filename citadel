@@ -282,6 +282,11 @@ fi
 if [[ "$command" = "start" ]]; then
   check_dependencies
 
+  is_dev_env=$(is_dev_environment)
+
+  # default values
+  $is_dev_env && verbose=true || verbose=false
+
   # get target container
   if [ -z ${2+x} ]; then
     check_container_name
@@ -298,11 +303,25 @@ if [[ "$command" = "start" ]]; then
     printf "Starting Citadel...\n\n"
     # ignore stdout, but show stderr
     docker start $target_container 2>&1 >/dev/null
-    printf "Citadel started.\n\n"
+
+    if $verbose; then
+      echo 'Citadel is starting up. Listening for logs...'
+      # wait for container
+      # TODO: this is very unreliable
+      sleep 5
+      # Log until Citadel is up
+      run_in_container "journalctl -f -u citadel-startup | sed '/Citadel is now accessible at/ q'"
+    else
+      start_spinner "Citadel is spinning up containers... This will only take a minute."
+      wait_for_dashboard
+      stop_spinner $?
+    fi
+
+    printf "\nCitadel started.\n"
     read -p "Do you want to log in now? (y/N) " should_login
     echo
     if [[ $should_login =~ [Yy]$ ]]; then
-      $CLI_NAME ssh
+      $CLI_NAME ssh $target_container
     fi
   fi
   exit
@@ -316,12 +335,14 @@ if [[ "$command" = "stop" ]]; then
   if [ -z ${2+x} ]; then
     check_container_name
     target_container=$(get_container_name)
+    check_container_running $target_container
+    echo "Shutting down Citadel..."
   else
     target_container=$2
+    check_container_running $target_container
+    echo "Shutting down Citadel named \"$target_container\"..."
   fi
-  check_container_exists $target_container
 
-  echo "Shutting down Citadel..."
   docker stop $target_container 2>&1 >/dev/null
   exit
 fi
