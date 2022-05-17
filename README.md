@@ -16,7 +16,7 @@ Sysbox enables us to do this in a way that is **easy and secure**. The inner Doc
 ### Install & Update Script
 
 ```shell
-mkdir -p ~/.citadel && curl -#L https://github.com/runcitadel/citadel-dev/tarball/main | tar -xzv --strip-components 1 --exclude={README.md,LICENSES,LICENSE,.gitignore,.github} -C ~/.citadel
+mkdir -p ~/.citadel && curl -#L https://github.com/runcitadel/citadel-dev/tarball/main | tar -xzv --strip-components 1 --exclude={citadel-startup.service,Dockerfile,README.md,LICENSES,LICENSE,.gitignore,.github} -C ~/.citadel
 ```
 
 Running the above command downloads the repository to ~/.citadel. To update later on, just run that command again.
@@ -43,13 +43,13 @@ citadel install
 
 Start Citadel and login in with the default credentials (user: _citadel_, password: _freedom_)
 
-```shell
+```
 citadel boot
 ```
 
 List all possible commands
 
-```shell
+```
 citadel help
 ```
 
@@ -58,7 +58,7 @@ citadel help
 This CLI also serves as an easy way to bootstrap a development environment with hot module replacement for rapid iterations.
 For linking @runcitadel packages use `yarn link -r ../<package>` & `yarn unlink ../<package>` as needed from the appropriate directory.
 
-```shell
+```
 citadel dev <directory>
 ```
 
@@ -79,5 +79,4 @@ For Sysbox related issues see https://github.com/nestybox/sysbox/blob/master/doc
 ## License
 
 All code committed on and before git commit `874d4d8` is licensed via MIT and © Umbrel
-
 All code committed after git commit `874d4d8` is licensed GPL v3
