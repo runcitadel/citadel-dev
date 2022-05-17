@@ -3,25 +3,28 @@ set -euo pipefail
 
 show_help() {
   cat <<EOF
-${CLI_NAME} ${CLI_VERSION}
-
+${CLI_NAME}-cli v${CLI_VERSION}
 Automatically initialize and manage isolated Citadel instances.
 
 Usage: ${CLI_NAME} <command> [options]
 
+Flags:
+    -h, --help                         Show this help message
+    -v, --version                      Show version information for this CLI
+
 Commands:
-    help                               Show this help message
     install                            Builds the image and installs Docker + Sysbox
     dev [options]                      Initialize a development environment
     boot [options]                     Run a new container
-    list                               List all Citadel containers with their status in a table format
     start                              Start the container
     stop                               Stop the container
-    reload                             Reloads the Citadel service
+    list                               List all Citadel containers with their status in a table format
+    ssh                                Get an SSH session inside a container
+    info                               Show information about a container
+    reload                             Reload the Citadel service
     backup                             Backup the container
     restore <path>                     Restore a backup
-    destroy                            Destroy the container
-    ssh <command>                      Get an SSH session inside the container
+    destroy                            Destroy a container
     run <command>                      Run a command inside the container
     containers                         List container services
     rebuild <container>                Rebuild a container service
@@ -29,7 +32,6 @@ Commands:
     fund <amount>                      Fund the onchain wallet (regtest mode only)
     auto-mine <seconds>                Generate a block continuously (regtest mode only)
     logs                               Stream Citadel logs
-    version                            Show version information for this CLI
 EOF
 }
 
@@ -74,35 +76,96 @@ show_welcome() {
 
 EOF
 
-  if ${4}; then
+  if ${5}; then
     cat <<EOF
-Citadel started in development mode with Bitcoin network set to ${1}.
+Citadel started in development mode with Bitcoin network set to ${4}.
 
 Yarn is installing dependencies and spinning up development servers.
 Run \`${CLI_NAME} logs dashboard manager middleware\` to see progress.
 
 URLs:
 
- - dashboard (current)  http://${2}.local
-                        http://${3}
+ - Dashboard (current) 
 
- - dashboard (new)      http://${2}.local:8000
-                        http://${3}:8000
+      Local:    http://${1}.local
+      Network:  http://${2}:${3}
+
+ - Dashboard (new)     
+
+      Local:    http://${1}.local:8000
+      Network:  not available
 
 --------------------------------------------------------------------------------
 EOF
   else
     cat <<EOF
-Citadel is running with Bitcoin network set to ${1}.
+Citadel is running with Bitcoin network set to ${4}.
 
 Dashboard listening at:
 
-  - http://${2}.local
-  - http://${3}
+  - Local:    http://${1}.local
+  - Network:  http://${2}:${3}
 
 --------------------------------------------------------------------------------
 EOF
   fi
+}
+
+show_info() {
+  cat <<EOF
+
+                                    *(#%%(*                                     
+                              **/(###(/#&&&%#(/**                               
+                           *(((((//*,,,#@@@@&&&%#((*                            
+                         */(%(**,,,,,,,#@@@@@@@@@%(/                            
+                         */(%/,,,,,,,,,#@@@@@@@@@%(*                            
+             **/(##/*,,,,*/(%/,,,**/(#%%&&&&@@@@@%(*,,,,,*/#&%(/**              
+         */(((((/*,,,,,,,*(##(/(##%%%#(%&&&&&&&&&%(/**,,,/(%@@&&&%#(/*      
+     */(%%#(**,,,,,,,*/(#%&&&&&%%#(/**,#@@@&&&&&&&&&&%#(//(%@@@@@@@&%%%(**      
+     (%&&&%%%(*,,,,/(%&&&&&&&#/*,,,,,,,#@@@@@@@&&&&&&&&&&&%&@@@@&&%%%(/*,*      
+     (%&@@@@&&&%#(/#%&&%%#/*,,,,,,,,,,,#@@@@@@@@@@@&&&&&&&%&&%%##(/*,,,,,*      
+     (%&@@@@@@@@&&%#((/*,,,,,,,,,,,,,,,#@@@@@@@@@@@@@@@@&&&%%(/*,,,,,,,,,*      
+     (%&@@@@@@@@@&#/,,,,,,,,,,,,,,,,,,,#@@@@@@@@@@@@@@@@@@@%(/,,,,,,,,,,,*      
+     (%&@@@@@@@@@&#(/**,,,*(%##/,,,,,,,#@@@@@@@&%%%&&@@@@&&%(/,,,,,,,,,,,*      
+     (%&@@@@@@@@@&###%&%#((%@&&&&%(/**,#@@@&%%%#(*,(%%%&&&%#(/,,,,,,,,,,,*      
+     (%&@@@@@@@@@@&%%&&&&&%&@@@@@@&&&%##%##(/*,,,,,/%%&&&%#(**,,,,,,,,,,,*      
+     (%&@@@@@@@@@@@@@@@&%%%&@@@@@@@@@@@#**,,,,,,,,,/%%%(/**,,,,,,,,,,,,,,*      
+     (%&@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,*      
+     (%&@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,*      
+     (%&@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,*      
+     (%&@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,*      
+     (%&@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,*      
+     /%&@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,*      
+     *(%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,*      
+       #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,*      
+       */#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,*        
+         */#&&@@@@@@@@@@@@@@@@@@@@@@@@@#,,,,,,,,,,,,,,,,,,,,,,,,,,,*           
+            */(#%&@@@@@@@@@@@@@@@@@@@@@#,,,,,,,,,,,,,,,,,,,,,,,,*              
+                **/(%&@@@@@@@@@@@@@@@@@#,,,,,,,,,,,,,,,,,,,,,*                 
+                      *(%&@@@@@@@@@@@@@#,,,,,,,,,,,,,,,,,,*                    
+                         **(%%&@@@@@@@@#,,,,,,,,,,,,,,*                        
+                             **(#%&@@@@#,,,,,,,,,,,*                           
+                                  */(#&#,,,,,,,*
+                                      *#,,,*                               
+
+--------------------------------------------------------------------------------
+
+ Name: ${1}
+ Status: ${2}
+ Bitcoin Network: ${6}
+
+ - Dashboard 
+
+      Local:    http://${1}.local
+      Network:  http://${3}:${4}
+
+ - SSH
+
+      Local:    ssh citadel@${1}.local
+      Network:  ssh citadel@${3} -p ${5}
+
+--------------------------------------------------------------------------------
+EOF
 }
 
 # Get script location and correctly handle any symlinks
@@ -214,15 +277,24 @@ get_container_name() {
   fi
 }
 
-get_container_ip() {
-  echo $(docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $(get_container_name))
+get_host_ip() {
+  # Get the first non-localhost and non-IPv6 IP of the host with unknown network interfaces
+  echo $(ip addr show | grep "inet " | grep -v 127.0.0. | head -1 | cut -d" " -f6 | cut -d/ -f1)
 }
 
 get_container_hostname() {
-  echo $(docker inspect --format='{{.Config.Hostname}}' $(get_container_name))
+  echo $(docker container inspect --format='{{.Config.Hostname}}' $1)
 }
 
-# Check configured Bitcoin network directly from container
+get_container_port_http() {
+  echo $(docker container inspect --format='{{(index (index .NetworkSettings.Ports "80/tcp") 0).HostPort}}' $1)
+}
+
+get_container_port_ssh() {
+  echo $(docker container inspect --format='{{(index (index .NetworkSettings.Ports "22/tcp") 0).HostPort}}' $1)
+}
+
+# Check configured Bitcoin network directly from container .env
 get_node_network() {
   network_line=$(run_in_container "cat .env | grep BITCOIN_NETWORK")
   network=${network_line:16}

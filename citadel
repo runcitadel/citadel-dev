@@ -6,7 +6,7 @@ source $(dirname $0)/../scripts/spinner.sh
 source $(dirname $0)/../scripts/utils.sh
 
 CLI_NAME="$(basename $0)"
-CLI_VERSION="1.3.2"
+CLI_VERSION="1.3.3"
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
 IMAGE_NAME="ghcr.io/runcitadel/citadel-dev"
 
@@ -182,7 +182,7 @@ if [[ "$command" = "boot" ]]; then
       exit 1
     }
   else
-    echo "Booting..."
+    echo "Booting with Bitcoin network set to $network..."
     docker run --runtime sysbox-runc --env NETWORK=$network --detach --publish-all --name $name --hostname $name $IMAGE_NAME &>/dev/null || {
       echo "Container with name \"$name\" exists already. Either remove (or rename) it or create a new one by passing a different name with \`$CLI_NAME boot --name <name>\`."
       exit 1
@@ -202,7 +202,7 @@ if [[ "$command" = "boot" ]]; then
     stop_spinner $?
   fi
 
-  show_welcome $network $name $(get_container_ip) $development
+  show_welcome $name $(get_host_ip) $(get_container_port_http $name) $network $development
   read -p "Do you want to log in now? (y/N) " should_login
   echo
   if [[ $should_login =~ [Yy]$ ]]; then
@@ -219,12 +219,17 @@ if [[ "$command" = "list" ]] || [[ "$command" = "ls" ]]; then
   TEMPFILE=$(mktemp)
   trap "rm -f $TEMPFILE" EXIT
 
-  echo "NAME|CONTAINER ID|HOSTNAME|IP|STATUS" >>$TEMPFILE
+  echo "NAME|CONTAINER ID|STATUS|LOCAL|NETWORK" >>$TEMPFILE
 
   containers=$(docker ps --all --filter "ancestor=$IMAGE_NAME" --format '{{.Names}}')
   for container in $containers; do
-    info=$(docker inspect -f '{{.Id}}|{{.Config.Hostname}}|{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}|{{.State.Status}}' $container)
-    echo "$container|$info" >>$TEMPFILE
+    id=$(docker container inspect --format '{{.Id}}' $container)
+    id_short=${id:0:12}
+    status=$(docker container inspect --format '{{.State.Status}}' $container)
+    hostname=$(get_container_hostname $container)
+    host_ip=$(get_host_ip)
+    port_http=$(get_container_port_http $container)
+    echo "$container|$id_short|$status|http://$hostname.local|http://$host_ip:$port_http" >>$TEMPFILE
   done
 
   column -t -s'|' $TEMPFILE
@@ -232,48 +237,44 @@ if [[ "$command" = "list" ]] || [[ "$command" = "ls" ]]; then
   exit
 fi
 
+# Show information about a Citadel container
+if [[ "$command" = "info" ]]; then
+  check_dependencies
+
+  # get target container
+  if [ -z ${2+x} ]; then
+    check_container_name
+    target_container=$(get_container_name)
+  else
+    target_container=$2
+  fi
+  check_container_exists $target_container
+
+  status=$(docker container inspect --format '{{.State.Status}}' $target_container)
+  port_http=$(get_container_port_http $target_container)
+  port_ssh=$(get_container_port_ssh $target_container)
+
+  show_info $target_container $status $(get_host_ip) $port_http $port_ssh $(get_node_network)
+  exit
+fi
+
 # Get an SSH session inside the container
 if [[ "$command" = "ssh" ]]; then
   check_dependencies
-  check_container_name
-
-  # get host IPs
-  addresses=($(ip addr | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p'))
-
-  # get target container and its port
-  target_container=$(get_container_name)
-  check_container_running $target_container
-  port=$(docker container inspect --format='{{(index (index .NetworkSettings.Ports "22/tcp") 0).HostPort}}' $target_container)
 
   if [[ $# -eq 2 ]]; then
-    if [[ $2 == 'list' ]]; then
-      printf "Use one of the following commands to ssh into \"$target_container\" from another device:\n\n"
-      for address in ${addresses[@]}; do
-        echo "ssh citadel@${address} -p $port"
-      done
-      exit
-    fi
-
-    if [[ $2 == '--help' ]]; then
-      cat <<EOF
-Usage: ${CLI_NAME} ssh <argument>
-
-Arguments:
-    <target>          Specify a target container
-    list              List IP adresses
-    --help            Show this help message
-EOF
-      exit
-    fi
-
     # target specified
-    # get container and port again
     target_container=$2
     check_container_running $target_container
-    port=$(docker container inspect --format='{{(index (index .NetworkSettings.Ports "22/tcp") 0).HostPort}}' $target_container)
+  else
+    # get target container and its port
+    check_container_name
+    target_container=$(get_container_name)
+    check_container_running $target_container
+    port=$(get_container_port_ssh $target_container)
   fi
 
-  ssh -t citadel@${addresses[1]} -p $port 'cd /home/citadel/citadel && exec bash -l'
+  ssh -t "citadel@$target_container.local" 'cd /home/citadel/citadel && exec bash -l'
 
   exit
 fi
@@ -355,12 +356,14 @@ if [[ "$command" = "reload" ]]; then
   if [ -z ${2+x} ]; then
     check_container_name
     target_container=$(get_container_name)
+    check_container_running $target_container
+    printf "Reloading the Citadel service...\n\n"
   else
     target_container=$2
+    check_container_running $target_container
+    printf "Reloading the Citadel service in \"$target_container\"...\n\n"
   fi
-  check_container_exists $target_container
 
-  printf "Reloading the Citadel service...\n\n"
   run_in_container "scripts/stop && scripts/configure && scripts/start"
   exit
 fi
@@ -373,13 +376,16 @@ if [[ "$command" = "destroy" ]]; then
   if [ -z ${2+x} ]; then
     check_container_name
     target_container=$(get_container_name)
+    check_container_exists $target_container
+    echo "WARNING: This will completely remove \"$target_container\" and its data."
+    echo "If you just want to stop the container run \`$CLI_NAME stop\`."
   else
     target_container=$2
+    check_container_exists $target_container
+    echo "WARNING: This will completely remove \"$target_container\" and its data."
+    echo "If you just want to stop the container run \`$CLI_NAME stop $target_container\`."
   fi
-  check_container_exists $target_container
 
-  echo "WARNING: This will completely remove the container and its data."
-  echo "If you just want to stop the container run \`$CLI_NAME stop\`."
   read -p "Are you sure? (y/N) "
   echo
   if [[ $REPLY =~ [Yy]$ ]]; then
@@ -416,7 +422,7 @@ if [[ "$command" = "rebuild" ]]; then
        docker compose build $container  \
     && docker compose stop $container   \
     && docker compose rm -f $container  \
-    && DEVICE_HOSTS=$(get_container_hostname) docker compose up -d $container"
+    && docker compose up -d $container"
   exit
 fi
 
@@ -638,8 +644,14 @@ if [[ "$command" = "auto-mine" ]]; then
 fi
 
 # Show version information for this CLI
-if [[ "$command" = "version" ]]; then
+if [[ "$command" = "--version" ]] || [[ "$command" = "-v" ]]; then
   echo "$CLI_NAME v$CLI_VERSION"
+  exit
+fi
+
+# Show usage information for this CLI
+if [[ "$command" = "--help" ]] || [[ "$command" = "-h" ]]; then
+  show_help
   exit
 fi
 
