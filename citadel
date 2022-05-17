@@ -195,10 +195,10 @@ if [[ "$command" = "boot" ]]; then
     # TODO: this is very unreliable
     sleep 5
     # Log until Citadel is up
-    run_in_container "journalctl -f -u citadel-startup | sed '/Citadel is now accessible at/ q'"
+    run_in_container "journalctl -f -u citadel-startup | sed '/Citadel is now accessible at/ q'" $name
   else
     start_spinner "Citadel is spinning up containers... This will only take a minute."
-    wait_for_dashboard
+    wait_for_dashboard $name
     stop_spinner $?
   fi
 
@@ -311,10 +311,10 @@ if [[ "$command" = "start" ]]; then
       # TODO: this is very unreliable
       sleep 5
       # Log until Citadel is up
-      run_in_container "journalctl -f -u citadel-startup | sed '/Citadel is now accessible at/ q'"
+      run_in_container "journalctl -f -u citadel-startup | sed '/Citadel is now accessible at/ q'" $target_container
     else
       start_spinner "Citadel is spinning up containers... This will only take a minute."
-      wait_for_dashboard
+      wait_for_dashboard $target_container
       stop_spinner $?
     fi
 
@@ -364,7 +364,7 @@ if [[ "$command" = "reload" ]]; then
     printf "Reloading the Citadel service in \"$target_container\"...\n\n"
   fi
 
-  run_in_container "scripts/stop && scripts/configure && scripts/start"
+  run_in_container "scripts/stop && scripts/configure && scripts/start" $target_container
   exit
 fi
 
@@ -399,6 +399,7 @@ if [[ "$command" = "destroy" ]]; then
 fi
 
 # List container services
+# TODO: multiple
 if [[ "$command" = "containers" ]]; then
   check_dependencies
   check_container_name
@@ -408,6 +409,7 @@ if [[ "$command" = "containers" ]]; then
 fi
 
 # Rebuild a container service
+# TODO: multiple
 if [[ "$command" = "rebuild" ]]; then
   check_dependencies
   check_container_name
@@ -427,6 +429,7 @@ if [[ "$command" = "rebuild" ]]; then
 fi
 
 # Backup the container
+# TODO: multiple
 if [[ "$command" = "backup" ]]; then
   check_dependencies
   check_container_name
@@ -495,6 +498,7 @@ if [[ "$command" = "restore" ]]; then
 fi
 
 # Rebuild a container service
+# TODO: multiple
 if [[ "$command" = "app" ]]; then
   check_dependencies
   check_container_name
@@ -511,6 +515,7 @@ if [[ "$command" = "app" ]]; then
 fi
 
 # Stream Citadel logs
+# TODO: multiple
 if [[ "$command" = "logs" ]]; then
   check_dependencies
   check_container_name
@@ -528,6 +533,7 @@ if [[ "$command" = "logs" ]]; then
 fi
 
 # Run a command inside the container
+# TODO: multiple
 if [[ "$command" = "run" ]]; then
   check_dependencies
   check_container_name

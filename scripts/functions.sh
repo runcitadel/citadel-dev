@@ -273,6 +273,7 @@ get_container_name() {
   if $is_dev_env; then
     cat "$PWD/.citadel-dev"
   else
+    # TODO:
     echo 'citadel'
   fi
 }
@@ -323,14 +324,25 @@ check_node_network() {
 
 # Run a command inside the container
 run_in_container() {
-  docker exec -t $(get_container_name) bash -c "cd /home/citadel/citadel && $1"
+  if [ -z ${2+x} ]; then
+    target_container=$(get_container_name)
+  else
+    target_container=$2
+  fi
+
+  docker exec -t $target_container bash -c "cd /home/citadel/citadel && $1"
 }
 
 # Check if Dashboard is running
 wait_for_dashboard() {
-  # TOOD: fix for multiple prod
+  if [ -z ${1+x} ]; then
+    target_container=$(get_container_name)
+  else
+    target_container=$1
+  fi
+
   while true; do
-    run_in_container "docker logs dashboard" &>/dev/null || {
+    run_in_container "docker logs dashboard" $target_container &>/dev/null || {
       # echo "Dashboard is not running. Trying again in 5 seconds..."
       sleep 5
       continue
