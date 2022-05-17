@@ -93,14 +93,6 @@ RUN apt-get update && apt-get install --no-install-recommends -y      \
     mkdir /home/citadel/.ssh &&                                       \
     chown citadel:citadel /home/citadel/.ssh
 
-EXPOSE 22
-
-# Make use of stopsignal (instead of sigterm) to stop systemd containers.
-STOPSIGNAL SIGRTMIN+3
-
-# Set systemd as entrypoint.
-ENTRYPOINT [ "/sbin/init", "--log-level=err" ]
-
 
 FROM docker as citadel
 
@@ -140,6 +132,13 @@ RUN apt-get update &&                                                          \
 COPY citadel-startup.service /lib/systemd/system/
 RUN ln -sf /lib/systemd/system/citadel-startup.service                         \
     /etc/systemd/system/multi-user.target.wants/citadel-startup.service
+
+# Expose SSH and HTTP ports
+EXPOSE 22
+EXPOSE 80
+
+# Make use of stopsignal (instead of sigterm) to stop systemd containers.
+STOPSIGNAL SIGRTMIN+3
 
 # Set systemd as entrypoint.
 ENTRYPOINT [ "/sbin/init", "--log-level=err" ]
