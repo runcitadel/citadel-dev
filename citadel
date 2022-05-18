@@ -206,7 +206,7 @@ if [[ "$command" = "boot" ]]; then
   read -p "Do you want to log in now? (y/N) " should_login
   echo
   if [[ $should_login =~ [Yy]$ ]]; then
-    $CLI_NAME ssh
+    $CLI_NAME ssh $name
   fi
 
   exit
