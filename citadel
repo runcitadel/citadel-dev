@@ -228,8 +228,17 @@ if [[ "$command" = "list" ]] || [[ "$command" = "ls" ]]; then
     status=$(docker container inspect --format '{{.State.Status}}' $container)
     hostname=$(get_container_hostname $container)
     host_ip=$(get_host_ip)
-    port_http=$(get_container_port_http $container)
-    echo "$container|$id_short|$status|http://$hostname.local|http://$host_ip:$port_http" >>$TEMPFILE
+
+    if $(is_container_running $container); then
+      port_http=$(get_container_port_http $container)
+      local_url="http://$hostname.local"
+      network_url="http://$host_ip:$port_http"
+    else
+      local_url="—"
+      network_url="—"
+    fi
+
+    echo "$container|$id_short|$status|$local_url|$network_url" >>$TEMPFILE
   done
 
   column -t -s'|' $TEMPFILE

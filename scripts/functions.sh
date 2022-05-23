@@ -258,6 +258,16 @@ check_multiple() {
   fi
 }
 
+is_container_running() {
+  status=$(docker container inspect -f '{{.State.Status}}' $1)
+
+  if [[ $(trim $status) == "running" ]]; then
+    echo true
+  else
+    echo false
+  fi
+}
+
 is_dev_environment() {
   if [ -f "$PWD/.citadel-dev" ]; then
     echo true

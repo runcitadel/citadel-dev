@@ -78,5 +78,5 @@ For Sysbox related issues see https://github.com/nestybox/sysbox/blob/master/doc
 
 ## License
 
-All code committed on and before git commit `874d4d8` is licensed via MIT and © Umbrel
+All code committed on and before git commit `874d4d8` is licensed via MIT and © Umbrel<br>
 All code committed after git commit `874d4d8` is licensed GPL v3
