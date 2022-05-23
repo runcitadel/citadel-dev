@@ -248,13 +248,14 @@ if [[ "$command" = "info" ]]; then
   else
     target_container=$2
   fi
-  check_container_exists $target_container
+  check_container_running $target_container
 
   status=$(docker container inspect --format '{{.State.Status}}' $target_container)
   port_http=$(get_container_port_http $target_container)
   port_ssh=$(get_container_port_ssh $target_container)
+  network=$(get_node_network $target_container)
 
-  show_info $target_container $status $(get_host_ip) $port_http $port_ssh $(get_node_network)
+  show_info $target_container $status $(get_host_ip) $port_http $port_ssh $network
   exit
 fi
 

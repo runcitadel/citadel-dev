@@ -152,7 +152,7 @@ show_info() {
 
  Name: ${1}
  Status: ${2}
- Bitcoin Network: ${6}
+ Network: ${6}
 
  - Dashboard 
 
@@ -297,7 +297,13 @@ get_container_port_ssh() {
 
 # Check configured Bitcoin network directly from container .env
 get_node_network() {
-  network_line=$(run_in_container "cat .env | grep BITCOIN_NETWORK")
+  if [ -z ${1+x} ]; then
+    target_container=$(get_container_name)
+  else
+    target_container=$1
+  fi
+
+  network_line=$(run_in_container "cat .env | grep BITCOIN_NETWORK" $target_container)
   network=${network_line:16}
   echo $(trim $network)
 }
