@@ -300,9 +300,11 @@ if [[ "$command" = "start" ]]; then
 
   # get target container
   if [ -z ${2+x} ]; then
+    with_target=false
     check_container_name
     target_container=$(get_container_name)
   else
+    with_target=true
     target_container=$2
   fi
   check_container_exists $target_container
@@ -311,7 +313,12 @@ if [[ "$command" = "start" ]]; then
     echo "Citadel is already running."
     exit 1
   else
-    printf "Starting Citadel...\n\n"
+    if $with_target; then
+      printf "Starting Citadel \"$target_container\"...\n\n"
+    else
+      printf "Starting Citadel...\n\n"
+    fi
+
     # ignore stdout, but show stderr
     docker start $target_container 2>&1 >/dev/null
 
@@ -601,6 +608,9 @@ if [[ "$command" = "fund" ]]; then
 
   # Check if LND wallet exists
   lnd_wallet_state=$($CLI_NAME lncli --network regtest state | jq -r '.state')
+
+  # echo $lnd_wallet_state
+  # exit
 
   if [[ $lnd_wallet_state == "NON_EXISTING" ]]; then
     echo "No LND Wallet found. Create a user first."
