@@ -1,0 +1,6 @@
+#!/bin/sh
+
+# Add binaries to $PATH
+if [ -d "/home/citadel/citadel/bin" ]; then
+    export PATH="$PATH:/home/citadel/citadel/bin"
+fi

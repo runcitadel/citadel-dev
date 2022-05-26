@@ -102,6 +102,7 @@ RUN apt-get update &&                                                          \
             git                                                                \
             xxd                                                                \
             net-tools                                                          \
+            micro                                                              \
             vim                                                                \
             wget                                                               \
             fswatch                                                            \
@@ -132,6 +133,10 @@ RUN apt-get update &&                                                          \
 COPY citadel-startup.service /lib/systemd/system/
 RUN ln -sf /lib/systemd/system/citadel-startup.service                         \
     /etc/systemd/system/multi-user.target.wants/citadel-startup.service
+
+# Update .bashrc
+COPY .path /home/citadel/
+RUN echo 'source "/home/citadel/.path"' >> /home/citadel/.bashrc
 
 # Expose SSH and HTTP ports
 EXPOSE 22
