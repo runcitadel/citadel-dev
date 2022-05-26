@@ -28,7 +28,7 @@ if [[ "$command" = "install" ]]; then
 
   # install Sysbox
   echo 'Installing Sysbox...'
-  if command -v "sysbox" >/dev/null 2>&1; then
+  if command -v "sysbox-runc" >/dev/null 2>&1; then
     echo 'Sysbox is already installed. Skipping...'
   else
     sudo $SCRIPT_DIR/../scripts/install-sysbox.sh

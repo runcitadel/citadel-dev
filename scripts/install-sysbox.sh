@@ -7,8 +7,8 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 # check if installed
-if command -v "sysbox" >/dev/null 2>&1; then
-    echo 'Error: the "sysbox" command appears to already exist on this system.'
+if command -v "sysbox-runc" >/dev/null 2>&1; then
+    echo 'Error: the "sysbox-runc" command appears to already exist on this system.'
     exit 1
 fi
 
