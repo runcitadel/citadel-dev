@@ -594,6 +594,19 @@ if [[ "$command" = "lncli" ]]; then
   exit
 fi
 
+# Delete the user and wallet
+if [[ "$command" = "reset" ]]; then
+  check_dependencies
+  check_dev_environment
+
+  printf "Deleting user and wallet...\n"
+  run_in_container "GLOBIGNORE=**/lnd.conf && rm -rf lnd/* && rm -f db/user.json && rm -f db/citadel-seed/seed"
+  printf "Reloading the Citadel service...\n"
+  run_in_container "systemctl restart citadel-startup"
+
+  exit
+fi
+
 # Fund the wallet
 if [[ "$command" = "fund" ]]; then
   check_dependencies
