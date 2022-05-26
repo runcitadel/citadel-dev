@@ -16,7 +16,7 @@ fi
 printf "\n# ATTENTION: This script will build Sysbox from source which can take a long time.\n"
 echo "To get the packaged version for your system see installation instructions at"
 echo "https://github.com/nestybox/sysbox/blob/master/docs/user-guide/install-package.md"
-read -p "Do you want to continue? (y/N) " should_start
+read -p "Do you want to continue? [y/N] " should_start
 if [[ ! $should_start =~ [Yy]$ ]]; then
     exit
 fi

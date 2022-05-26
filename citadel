@@ -203,7 +203,7 @@ if [[ "$command" = "boot" ]]; then
   fi
 
   show_welcome $name $(get_host_ip) $(get_container_port_http $name) $network $development
-  read -p "Do you want to log in now? (y/N) " should_login
+  read -p "Do you want to log in now? [y/N] " should_login
   echo
   if [[ $should_login =~ [Yy]$ ]]; then
     $CLI_NAME ssh $name
@@ -336,7 +336,7 @@ if [[ "$command" = "start" ]]; then
     fi
 
     printf "\nCitadel started.\n"
-    read -p "Do you want to log in now? (y/N) " should_login
+    read -p "Do you want to log in now? [y/N] " should_login
     echo
     if [[ $should_login =~ [Yy]$ ]]; then
       $CLI_NAME ssh $target_container
@@ -403,7 +403,7 @@ if [[ "$command" = "destroy" ]]; then
     echo "If you just want to stop the container run \`$CLI_NAME stop $target_container\`."
   fi
 
-  read -p "Are you sure? (y/N) "
+  read -p "Are you sure? [y/N] "
   echo
   if [[ $REPLY =~ [Yy]$ ]]; then
     echo "Destroying container..."
@@ -485,7 +485,7 @@ if [[ "$command" = "restore" ]]; then
     docker tag citadel-backup:${backup_date} $IMAGE_NAME
     echo "Cleaning up..."
     docker rmi citadel-backup:${backup_date} &>/dev/null
-    read -p "Backup restored successfully. Do you want to boot it now? (y/N) " should_boot
+    read -p "Backup restored successfully. Do you want to boot it now? [y/N] " should_boot
     echo
     if [[ $should_boot =~ [Yy]$ ]]; then
       $CLI_NAME boot
@@ -497,7 +497,7 @@ if [[ "$command" = "restore" ]]; then
     exit
   }
 
-  read -p "Found existing Citadel installation. Do you want to overwrite it? (y/N) " should_overwrite
+  read -p "Found existing Citadel installation. Do you want to overwrite it? [y/N] " should_overwrite
   echo
   if [[ $should_overwrite =~ [Yy]$ ]]; then
     echo "Destroying current Citadel..."
