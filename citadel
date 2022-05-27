@@ -454,38 +454,7 @@ if [[ "$command" = "destroy" ]]; then
   exit
 fi
 
-# List container services
-# TODO: multiple
-if [[ "$command" = "containers" ]]; then
-  check_dependencies
-  check_container_name
-
-  run_in_container "docker compose config --services"
-  exit
-fi
-
-# Rebuild a container service
-# TODO: multiple
-if [[ "$command" = "rebuild" ]]; then
-  check_dependencies
-  check_container_name
-
-  if [ -z ${2+x} ]; then
-    echo "A second argument is required!"
-    exit 1
-  fi
-
-  container="$2"
-  run_in_container "                    \
-       docker compose build $container  \
-    && docker compose stop $container   \
-    && docker compose rm -f $container  \
-    && docker compose up -d $container"
-  exit
-fi
-
 # Backup the container
-# TODO: multiple
 if [[ "$command" = "backup" ]]; then
   check_dependencies
   check_container_name
@@ -550,23 +519,6 @@ if [[ "$command" = "restore" ]]; then
   else
     echo "Cancelled."
   fi
-  exit
-fi
-
-# Rebuild a container service
-# TODO: multiple
-if [[ "$command" = "app" ]]; then
-  check_dependencies
-  check_container_name
-
-  if [ -z ${2+x} ]; then
-    echo "A second argument is required!"
-    exit 1
-  else
-    args="${@:2}"
-  fi
-
-  run_in_container "scripts/app ${args}"
   exit
 fi
 

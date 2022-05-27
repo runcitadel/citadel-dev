@@ -26,9 +26,6 @@ Commands:
     restore <path>                     Restore a backup
     destroy                            Destroy a container
     run <command>                      Run a command inside the container
-    containers                         List container services
-    rebuild <container>                Rebuild a container service
-    app <command> [options]            Manages apps installations
     fund <amount>                      Fund the onchain wallet (regtest mode only)
     auto-mine <seconds>                Generate a block continuously (regtest mode only)
     logs                               Stream Citadel logs
