@@ -457,6 +457,7 @@ fi
 # Backup the container
 if [[ "$command" = "backup" ]]; then
   check_dependencies
+  check_environment
   check_container_name
 
   current_date=$(date '+%Y-%m-%d')
@@ -523,9 +524,9 @@ if [[ "$command" = "restore" ]]; then
 fi
 
 # Stream Citadel logs
-# TODO: multiple
 if [[ "$command" = "logs" ]]; then
   check_dependencies
+  check_environment
   check_container_name
 
   shift
@@ -541,13 +542,14 @@ if [[ "$command" = "logs" ]]; then
 fi
 
 # Run a command inside the container
-# TODO: multiple
 if [[ "$command" = "run" ]]; then
   check_dependencies
+  check_environment
   check_container_name
 
   if [ -z ${2+x} ]; then
-    echo "A second argument is required!"
+    echo "Specify the command you want to run."
+    echo "Usage: \`$CLI_NAME $command \"<command>\"\`."
     exit 1
   fi
 
@@ -601,6 +603,7 @@ fi
 # Fund the wallet
 if [[ "$command" = "fund" ]]; then
   check_dependencies
+  check_environment
   check_regtest_mode
   check_inner_container "lightning"
   check_inner_container "bitcoin"
@@ -646,6 +649,7 @@ fi
 # Generate a block continuously
 if [[ "$command" = "auto-mine" ]]; then
   check_dependencies
+  check_environment
   check_regtest_mode
   check_inner_container "bitcoin"
 

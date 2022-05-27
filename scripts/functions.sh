@@ -244,6 +244,14 @@ is_container_running() {
   fi
 }
 
+is_citadel_environment() {
+  if [ -f "$PWD/.citadel" ] || [ -f "$PWD/.citadel-dev" ]; then
+    echo true
+  else
+    echo false
+  fi
+}
+
 is_dev_environment() {
   if [ -f "$PWD/.citadel-dev" ]; then
     echo true
@@ -292,7 +300,17 @@ get_node_network() {
   echo $(trim $network)
 }
 
-# Check that command was called from a dev environment
+# Check that command was run from a Citadel environment
+check_environment() {
+  is_citadel_environment=$(is_citadel_environment)
+
+  if ! $is_citadel_environment; then
+    echo "This command can only be run from a Citadel environment."
+    exit 1
+  fi
+}
+
+# Check that command was run from a dev environment
 check_dev_environment() {
   is_dev_env=$(is_dev_environment)
 
