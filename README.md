@@ -31,7 +31,7 @@ export PATH="$PATH:$HOME/.citadel/bin"
 
 If you want to have it permanently, also add the line to the correct profile file (~/.bash_profile, ~/.zshrc, ~/.profile, or ~/.bashrc).
 
-### Install Dependencies
+### Install Dependencies (optional)
 
 Install the required dependencies if you haven't already
 
@@ -40,6 +40,12 @@ citadel install
 ```
 
 ## Usage
+
+Initialize your environment 
+
+```
+citadel init
+```
 
 Start Citadel and login in with the default credentials (user: _citadel_, password: _freedom_)
 
@@ -59,7 +65,7 @@ This CLI also serves as an easy way to bootstrap a development environment with 
 For linking @runcitadel packages use `yarn link -r ../<package>` & `yarn unlink ../<package>` as needed from the appropriate directory.
 
 ```
-citadel dev <directory>
+citadel init --development
 ```
 
 ## Troubleshoot

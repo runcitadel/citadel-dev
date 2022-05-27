@@ -14,7 +14,7 @@ Flags:
 
 Commands:
     install                            Builds the image and installs Docker + Sysbox
-    dev [options]                      Initialize a development environment
+    init [options]                     Initialize a Citadel environment
     boot [options]                     Run a new container
     start                              Start the container
     stop                               Stop the container
@@ -219,42 +219,21 @@ check_container_running() {
 # Check if container name is unambiguous
 check_container_name() {
   is_dev_env=$(is_dev_environment)
-  is_multiple=$(check_multiple)
 
   if $is_dev_env; then
     if [ -s "$PWD/.citadel-dev" ]; then
       return
     else
-      echo "No container found for this environment. Try booting with \`citadel boot\`."
+      echo "No container found for the current directory. Change to a Citadel environment or specify a target."
       exit 1
     fi
-  fi
-
-  return
-
-  # TODO: enable multiple
-  #   if ! $is_multiple; then
-  #     docker ps --all --filter "ancestor=$IMAGE_NAME" --format '{{.Names}}' || {
-  #       exit 1
-  #     }
-  #   else
-  #     cat >&2 <<EOF
-  # More than one instance of Citadel found on your system.
-  # Either run this command again from a Citadel environment
-  # or specify a target container. Run \`citadel list\`
-  # to get an ID or name of a target container.
-  # EOF
-  #     exit 1
-  #   fi
-}
-
-check_multiple() {
-  containers=($(docker ps --all --filter "ancestor=$IMAGE_NAME" --format '{{.Names}}'))
-
-  if [[ ${#containers[@]} -gt 1 ]]; then
-    echo true
   else
-    echo false
+    if [ -s "$PWD/.citadel" ]; then
+      return
+    else
+      echo "No container found for the current directory. Change to a Citadel environment or specify a target."
+      exit 1
+    fi
   fi
 }
 
@@ -278,13 +257,11 @@ is_dev_environment() {
 
 get_container_name() {
   is_dev_env=$(is_dev_environment)
-  # is_multiple=$(check_multiple)
 
   if $is_dev_env; then
     cat "$PWD/.citadel-dev"
   else
-    # TODO:
-    echo 'citadel'
+    cat "$PWD/.citadel"
   fi
 }
 
@@ -329,7 +306,7 @@ check_dev_environment() {
 }
 
 # Check that network is regtest
-check_node_network() {
+check_regtest_mode() {
   network=$(get_node_network)
 
   if [[ ! "$network" == *"regtest"* ]]; then
