@@ -116,8 +116,8 @@ if [[ "$command" = "init" ]]; then
 
     git clone "$url" "$directory/$repo"
 
-    if [[ $development == true ]] && [[ $repo == "runcitadel/core" ]]; then
-      printf "\nCopying Docker Compose overrides..."
+    if [[ $development == true ]] && [[ $repo == "core" ]]; then
+      printf "\nCopying docker-compose.override.yml...\n"
       cp "$(get_script_location)/docker-compose.override.yml" "$directory/$repo"
     fi
   done
