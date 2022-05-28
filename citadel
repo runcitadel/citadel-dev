@@ -447,9 +447,12 @@ if [[ "$command" = "destroy" ]]; then
   read -p "Are you sure? [y/N] "
   echo
   if [[ $REPLY =~ [Yy]$ ]]; then
-    echo "Shutting down Citadel..."
-    # Shutdown Citadel safely
-    run_in_container "scripts/stop" $target_container
+    if $(is_container_running $target_container); then
+      echo "Shutting down Citadel..."
+      # Shutdown Citadel safely
+      run_in_container "scripts/stop" $target_container
+    fi
+
     echo "Destroying container..."
     docker rm -f $target_container &>/dev/null
     echo "Citadel container destroyed."
