@@ -182,7 +182,7 @@ get_script_location() {
 
 # Check if required dependencies are installed
 check_dependencies() {
-  for cmd in "git" "docker" "sysbox"; do
+  for cmd in "git" "docker" "sysbox-runc"; do
     if ! command -v $cmd >/dev/null 2>&1; then
       echo "This script requires Git, Docker and Sysbox to be installed."
       echo
