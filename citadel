@@ -38,53 +38,68 @@ if [[ "$command" = "install" ]]; then
   exit
 fi
 
-# Initialize a development environment
-if [[ "$command" = "dev" ]]; then
+# Initialize a Citadel environment
+if [[ "$command" = "init" ]]; then
   shift
 
-  if [ -z ${1+x} ]; then
-    printf "Missing target directory.\n"
-    echo "Usage: \`$CLI_NAME dev <directory>\`"
-    exit 1
-  fi
+  POSITIONAL_ARGS=()
 
-  directory=$1
+  development=false
   ssh=false
 
-  # parse arguments
-  for arg in "$@"; do
-    case "$1" in
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+    --dev | --development)
+      development=true
+      shift
+      ;;
     --ssh)
       ssh=true
-      shift 1
+      shift
+      ;;
+    -* | --*)
+      echo "Unknown option $1"
+      exit 1
       ;;
     *)
-      shift 1
+      POSITIONAL_ARGS+=("$1")
+      shift
       ;;
     esac
   done
 
-  # create target directory
+  set -- "${POSITIONAL_ARGS[@]}"
+
+  directory=${POSITIONAL_ARGS:-"."}
+
+  # create directory if it doesn't exist
   mkdir -p $directory
 
   if [[ "$(ls -A $directory)" ]]; then
-    echo "Target directory must be empty!"
+    echo "Directory must be empty!"
+    echo "You can specify a target directory with \`$CLI_NAME init <directory>\`"
     exit 1
   fi
 
   printf "\nCloning container repositories..."
 
-  repos="
-    runcitadel/core
-    runcitadel/manager
-    runcitadel/middleware
-    runcitadel/dashboard
-    runcitadel/ui
-    runcitadel/sdk
-    runcitadel/fs
-    runcitadel/utils
-    runcitadel/node-lndconnect
-    runcitadel/bitcoin-rpc"
+  if $development; then
+    touch "$directory/.citadel-dev"
+    repos="
+      runcitadel/core
+      runcitadel/manager
+      runcitadel/middleware
+      runcitadel/dashboard
+      runcitadel/ui
+      runcitadel/sdk
+      runcitadel/fs
+      runcitadel/utils
+      runcitadel/node-lndconnect
+      runcitadel/bitcoin-rpc"
+  else
+    touch "$directory/.citadel"
+    repos="runcitadel/core"
+  fi
 
   for repo in $repos; do
     echo
@@ -101,17 +116,30 @@ if [[ "$command" = "dev" ]]; then
 
     git clone "$url" "$directory/$repo"
 
-    if [[ $repo == "core" ]]; then
-      printf "\nCopying Docker Compose overrides..."
+    if [[ $development == true ]] && [[ $repo == "core" ]]; then
+      printf "\nCopying docker-compose.override.yml...\n"
       cp "$(get_script_location)/docker-compose.override.yml" "$directory/$repo"
     fi
   done
 
-  touch "$directory/.citadel-dev"
+  # TODO: move this to a helper
+  on_success="\xE2\x9C\x94"
+  on_fail="\xE2\x9D\x8C"
+  green="\e[1;32m"
+  red="\e[1;31m"
+  nc="\e[0m"
 
-  printf "\nYour development environment is now setup.\n"
-  printf "You can boot your system container with:\n\n"
-  printf "cd $directory && $CLI_NAME boot\n"
+  checkmark="${green}${on_success}${nc}"
+
+  if $development; then
+    printf "\n $checkmark Citadel development environment initialized successfully.\n"
+    printf "\nYou can boot the system container with:\n"
+  else
+    printf "\n $checkmark Citadel environment initialized successfully.\n"
+    printf "\nYou can boot the system container with:\n"
+  fi
+
+  printf "\`cd $directory && $CLI_NAME boot\`\n"
   exit
 fi
 
@@ -162,7 +190,8 @@ if [[ "$command" = "boot" ]]; then
     # save name to environment file
     echo $name >$PWD/.citadel-dev
 
-    docker run --detach --publish-all \
+    docker run \
+      --detach --publish-all \
       --runtime sysbox-runc \
       --env NETWORK=$network \
       --name $name \
@@ -183,7 +212,17 @@ if [[ "$command" = "boot" ]]; then
     }
   else
     echo "Booting with Bitcoin network set to $network..."
-    docker run --runtime sysbox-runc --env NETWORK=$network --detach --publish-all --name $name --hostname $name $IMAGE_NAME &>/dev/null || {
+    # save name to environment file
+    echo $name >$PWD/.citadel
+
+    docker run \
+      --detach --publish-all \
+      --runtime sysbox-runc \
+      --env NETWORK=$network \
+      --name $name \
+      --hostname $name \
+      --mount type=bind,source="$(pwd)/core",target=/home/citadel/citadel \
+      $IMAGE_NAME &>/dev/null || {
       echo "Container with name \"$name\" exists already. Either remove (or rename) it or create a new one by passing a different name with \`$CLI_NAME boot --name <name>\`."
       exit 1
     }
@@ -310,7 +349,7 @@ if [[ "$command" = "start" ]]; then
   check_container_exists $target_container
 
   if [ "$(docker container inspect -f '{{.State.Running}}' $target_container)" == "true" ]; then
-    echo "Citadel is already running."
+    echo "Citadel \"$target_container\" is already running."
     exit 1
   else
     if $with_target; then
@@ -358,9 +397,11 @@ if [[ "$command" = "stop" ]]; then
   else
     target_container=$2
     check_container_running $target_container
-    echo "Shutting down Citadel named \"$target_container\"..."
+    echo "Shutting down Citadel \"$target_container\"..."
   fi
 
+  # Shutdown Citadel safely
+  run_in_container "scripts/stop" $target_container
   docker stop $target_container 2>&1 >/dev/null
   exit
 fi
@@ -394,18 +435,24 @@ if [[ "$command" = "destroy" ]]; then
     check_container_name
     target_container=$(get_container_name)
     check_container_exists $target_container
-    echo "WARNING: This will completely remove \"$target_container\" and its data."
+    echo "WARNING: This will remove \"$target_container\"."
     echo "If you just want to stop the container run \`$CLI_NAME stop\`."
   else
     target_container=$2
     check_container_exists $target_container
-    echo "WARNING: This will completely remove \"$target_container\" and its data."
+    echo "WARNING: This will remove \"$target_container\"."
     echo "If you just want to stop the container run \`$CLI_NAME stop $target_container\`."
   fi
 
   read -p "Are you sure? [y/N] "
   echo
   if [[ $REPLY =~ [Yy]$ ]]; then
+    if $(is_container_running $target_container); then
+      echo "Shutting down Citadel..."
+      # Shutdown Citadel safely
+      run_in_container "scripts/stop" $target_container
+    fi
+
     echo "Destroying container..."
     docker rm -f $target_container &>/dev/null
     echo "Citadel container destroyed."
@@ -415,40 +462,10 @@ if [[ "$command" = "destroy" ]]; then
   exit
 fi
 
-# List container services
-# TODO: multiple
-if [[ "$command" = "containers" ]]; then
-  check_dependencies
-  check_container_name
-
-  run_in_container "docker compose config --services"
-  exit
-fi
-
-# Rebuild a container service
-# TODO: multiple
-if [[ "$command" = "rebuild" ]]; then
-  check_dependencies
-  check_container_name
-
-  if [ -z ${2+x} ]; then
-    echo "A second argument is required!"
-    exit 1
-  fi
-
-  container="$2"
-  run_in_container "                    \
-       docker compose build $container  \
-    && docker compose stop $container   \
-    && docker compose rm -f $container  \
-    && docker compose up -d $container"
-  exit
-fi
-
 # Backup the container
-# TODO: multiple
 if [[ "$command" = "backup" ]]; then
   check_dependencies
+  check_environment
   check_container_name
 
   current_date=$(date '+%Y-%m-%d')
@@ -514,27 +531,10 @@ if [[ "$command" = "restore" ]]; then
   exit
 fi
 
-# Rebuild a container service
-# TODO: multiple
-if [[ "$command" = "app" ]]; then
-  check_dependencies
-  check_container_name
-
-  if [ -z ${2+x} ]; then
-    echo "A second argument is required!"
-    exit 1
-  else
-    args="${@:2}"
-  fi
-
-  run_in_container "scripts/app ${args}"
-  exit
-fi
-
 # Stream Citadel logs
-# TODO: multiple
 if [[ "$command" = "logs" ]]; then
   check_dependencies
+  check_environment
   check_container_name
 
   shift
@@ -550,13 +550,14 @@ if [[ "$command" = "logs" ]]; then
 fi
 
 # Run a command inside the container
-# TODO: multiple
 if [[ "$command" = "run" ]]; then
   check_dependencies
+  check_environment
   check_container_name
 
   if [ -z ${2+x} ]; then
-    echo "A second argument is required!"
+    echo "Specify the command you want to run."
+    echo "Usage: \`$CLI_NAME $command \"<command>\"\`."
     exit 1
   fi
 
@@ -610,8 +611,8 @@ fi
 # Fund the wallet
 if [[ "$command" = "fund" ]]; then
   check_dependencies
-  check_dev_environment
-  check_node_network
+  check_environment
+  check_regtest_mode
   check_inner_container "lightning"
   check_inner_container "bitcoin"
 
@@ -656,8 +657,8 @@ fi
 # Generate a block continuously
 if [[ "$command" = "auto-mine" ]]; then
   check_dependencies
-  check_dev_environment
-  check_node_network
+  check_environment
+  check_regtest_mode
   check_inner_container "bitcoin"
 
   # default to 5 seconds

@@ -114,9 +114,6 @@ RUN apt-get update &&                                                          \
             python3-yaml                                                       \
             python3-requests &&                                                \
                                                                                \
-    git clone https://github.com/runcitadel/core.git /home/citadel/citadel &&  \
-    chown -R 1000:1000 /home/citadel/citadel &&                                \
-                                                                               \
     # Housekeeping
     apt-get clean -y &&                                                        \
     rm -rf                                                                     \
