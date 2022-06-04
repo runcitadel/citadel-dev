@@ -13,22 +13,22 @@ Flags:
     -v, --version                      Show version information for this CLI
 
 Commands:
-    install                            Builds the image and installs Docker + Sysbox
     init [options]                     Initialize a Citadel environment
-    boot [options]                     Run a new container
-    start                              Start the container
-    stop                               Stop the container
-    list                               List all Citadel containers with their status in a table format
+    boot [options]                     First time boot from a Citadel environment
+    start                              Start a container
+    stop                               Stop a container
+    list                               List all Citadel containers with their status
     ssh                                Get an SSH session inside a container
     info                               Show information about a container
     reload                             Reload the Citadel service
+    logs                               Stream Citadel logs
+    destroy                            Destroy a container
     backup                             Backup the container
     restore <path>                     Restore a backup
-    destroy                            Destroy a container
+    install                            Install dependencies needed for this CLI
     run <command>                      Run a command inside the container
     fund <amount>                      Fund the onchain wallet (regtest mode only)
     auto-mine <seconds>                Generate a block continuously (regtest mode only)
-    logs                               Stream Citadel logs
 EOF
 }
 
