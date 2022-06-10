@@ -193,6 +193,8 @@ if [[ "$command" = "boot" ]]; then
     docker run \
       --detach --publish-all \
       --runtime sysbox-runc \
+      --publish 8333:8333 \
+      --publish 9735:9735 \
       --env NETWORK=$network \
       --name $name \
       --hostname $name \

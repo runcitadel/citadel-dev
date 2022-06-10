@@ -41,7 +41,7 @@ citadel install
 
 ## Usage
 
-Initialize your environment 
+Initialize your environment
 
 ```
 citadel init
@@ -67,6 +67,8 @@ For linking @runcitadel packages use `yarn link -r ../<package>` & `yarn unlink 
 ```
 citadel init --development
 ```
+
+For information on how to setup a Multinode environment in regtest mode with [Lightning Polar](https://lightningpolar.com/), see [here](https://github.com/runcitadel/citadel-dev/blob/main/Multinode.md).
 
 ## Troubleshoot
 
