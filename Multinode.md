@@ -1,4 +1,4 @@
-# Multinode Setup
+# Multinode Setup (Regtest Mode)
 
 ## Preparation
 
@@ -29,7 +29,11 @@ bitcoin-cli getconnectioncount
 
 4. Start mining some blocks
 
-`citadel auto-mine` or click "Quick Mine" in Polar
+```shell
+citadel auto-mine
+```
+
+or click "Quick Mine" in Polar
 
 You should see synchronized block height on both nodes (you may have to refresh Polar)
 
