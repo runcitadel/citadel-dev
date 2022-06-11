@@ -61,8 +61,8 @@ citadel fund
    - CLN: `lightning-cli connect <node_key>@172.17.0.1`
    - Eclair: `eclair-cli connect --uri=<node_key>@172.17.0.1`
 4. Open a channel
-   - LND: `lncli openchannel --node_key <node_key> --local_amt 1000000`
-   - CLN: `lightning-cli fundchannel -k id=<node_key> amount=1000000`
+   - LND: `lncli openchannel <node_key> 1000000`
+   - CLN: `lightning-cli fundchannel <node_key> 1000000`
    - Eclair: `eclair-cli open --nodeId=<node_key> --fundingSatoshis=1000000`
 
 If you find that your Polar nodes don't have a large enough balance, try opening some channels in Polar first and it will fund them for you.
